@@ -54,6 +54,16 @@ describe("worker transport", () => {
     const re = host.handle({ t: "devCmd", cmd: { c: "reset", seed: 9 } });
     expect(re.some((m) => m.t === "snapshot" && m.tick === 0)).toBe(true);
   });
+  it("inspect returns the explanation for a character and nothing for unknown ids", () => {
+    const host = new SimHost({ seed: 1, population: 5 });
+    const out = host.handle({ t: "inspect", id: 2 });
+    expect(out[0].t === "inspect" && out[0].lines.length).toBeGreaterThan(1);
+    const none = host.handle({ t: "inspect", id: null });
+    expect(none).toEqual([]);
+    expect(host.inspectMsg()).toBeNull();
+    host.handle({ t: "inspect", id: 1 });
+    expect(host.inspectMsg()?.t).toBe("inspect");
+  });
   it("works with zero characters", () => {
     const host = new SimHost({ seed: 1, population: 0 });
     const out = host.handle({ t: "subscribe", viewport: { x: 0, y: 0, w: 60, h: 40, zoom: 3 } });

@@ -1,4 +1,4 @@
-import { createWorld, step, seedPopulation, arrive, Department, type World } from "@wc/sim-core";
+import { createWorld, step, seedPopulation, arrive, explain, Department, type World } from "@wc/sim-core";
 import type { ClientMsg, ServerMsg, Move, StateChange } from "@wc/protocol";
 
 export const MAX_CATCHUP_TICKS = 600;
@@ -8,6 +8,7 @@ export class SimHost {
   speed = 1;
   paused = false;
   private acc = 0;
+  private inspectId: number | null = null;
   constructor(private opts: { seed: number; population: number }) {
     this.world = this.build(opts.seed);
   }
@@ -17,6 +18,11 @@ export class SimHost {
     seedPopulation(w, this.opts.population);
     w.recordEvents = true;
     return w;
+  }
+
+  inspectMsg(): ServerMsg | null {
+    if (this.inspectId === null) return null;
+    return { t: "inspect", id: this.inspectId, tick: this.world.tick, lines: explain(this.world, this.inspectId) };
   }
 
   snapshot(): ServerMsg {
@@ -29,6 +35,7 @@ export class SimHost {
 
   handle(msg: ClientMsg): ServerMsg[] {
     if (msg.t === "subscribe") return [this.snapshot()];
+    if (msg.t === "inspect") { this.inspectId = msg.id; const m = this.inspectMsg(); return m ? [m] : []; }
     const cmd = msg.cmd;
     switch (cmd.c) {
       case "pause": this.paused = !this.paused; return [];

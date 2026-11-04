@@ -10,3 +10,4 @@ export * from "./ai/affordances"; export * from "./ai/decide";
 export * from "./ai/move";
 export * from "./org/jobs";
 export * from "./names"; export * from "./population";
+export * from "./ai/explain";

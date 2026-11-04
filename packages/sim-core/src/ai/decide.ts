@@ -1,4 +1,5 @@
 import type { World } from "../world";
+import type { Rng } from "../rng";
 import { findPath } from "../station/nav";
 import { interactionPoint } from "../station/starter";
 import { isWalkable, type Point } from "../station/tilemap";
@@ -14,8 +15,8 @@ function pos(world: World, id: number): Point {
 }
 
 /** All scored candidates, best first. Pure except for seeded rng draws. */
-export function scoreOptions(world: World, id: number): Scored[] {
-  const c = world.chars, map = world.station.map, rng = world.rng;
+export function scoreOptions(world: World, id: number, rng: Rng = world.rng): Scored[] {
+  const c = world.chars, map = world.station.map;
   const from = pos(world, id);
   const out: Scored[] = [];
   for (const aff of AFFORDANCES) {
