@@ -15,6 +15,7 @@ export class CharLayer {
   private ids: number[] = [];
   private depts: number[] = [];
   style: LodStyle = "dot";
+  textures: Map<string, Texture> | null = null;
   constructor() {
     for (const s of STYLES) { const c = new Container(); c.visible = s === "dot"; this.root.addChild(c); this.layers.set(s, { c, views: [], alpha: s === "dot" ? 1 : 0 }); }
   }
@@ -26,15 +27,17 @@ export class CharLayer {
     const l = this.layers.get(style)!;
     while (l.views.length < this.ids.length) {
       const i = l.views.length;
-      const body = new Sprite(Texture.WHITE), head = new Sprite(Texture.WHITE);
-      body.tint = DEPT_COLOR[this.depts[i]] ?? 0xffffff; head.tint = SKIN;
+      const tex = style === "sprite" ? this.textures?.get(`char:${this.depts[i]}:${this.ids[i] % 4}`) : undefined;
+      const body = new Sprite(tex ?? Texture.WHITE), head = new Sprite(Texture.WHITE);
+      body.tint = tex ? 0xffffff : DEPT_COLOR[this.depts[i]] ?? 0xffffff; head.tint = SKIN;
       if (style === "dot") { body.width = TILE * 0.9; body.height = TILE * 0.9; body.anchor.set(0.5); head.visible = false; }
       else if (style === "column") { body.width = TILE * 0.5; body.height = TILE * 0.8; body.anchor.set(0.5, 1); head.visible = false; }
+      else if (tex) { body.width = TILE; body.height = TILE; body.anchor.set(0.5); head.visible = false; }
       else {
         body.width = TILE * 0.38; body.height = TILE * 0.5; body.anchor.set(0.5, 1);
         head.width = TILE * 0.3; head.height = TILE * 0.3; head.anchor.set(0.5, 1);
       }
-      l.c.addChild(body); if (style === "silhouette" || style === "sprite") l.c.addChild(head);
+      l.c.addChild(body); if (style === "silhouette" || (style === "sprite" && !tex)) l.c.addChild(head);
       l.views.push({ body, head, dept: this.depts[i] });
     }
   }
@@ -54,11 +57,13 @@ export class CharLayer {
         const v = l.views[i];
         const p = tracks.positionAt(this.ids[i], renderTick);
         const vis = !!p && p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1;
-        v.body.visible = vis; if (s === "silhouette" || s === "sprite") v.head.visible = vis;
+        const spr = s === "sprite" && !!this.textures;
+        v.body.visible = vis; if (s === "silhouette" || (s === "sprite" && !spr)) v.head.visible = vis;
         if (!vis || !p) continue;
         const px = (p.x + 0.5) * TILE, py = (p.y + 0.5) * TILE;
         if (s === "dot") { v.body.position.set(px, py); }
         else if (s === "column") { v.body.position.set(px, py + TILE * 0.4); }
+        else if (spr) { v.body.position.set(px, py); }
         else { v.body.position.set(px, py + TILE * 0.45); v.head.position.set(px, py + TILE * 0.45 - TILE * 0.5); }
       }
     }

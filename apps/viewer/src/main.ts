@@ -4,7 +4,7 @@ import { createWorkerTransport } from "./transport/worker";
 import { Camera } from "./render/camera";
 import { Tracks } from "./render/interp";
 import { CharLayer } from "./render/characters";
-import { buildTileCanvas, canvasTexture, TILE } from "./render/tiles";
+import { buildTileCanvas, canvasTexture, characterTextures, TILE } from "./render/tiles";
 import { zoomLevel } from "./render/lod";
 
 const BUILD = (import.meta as unknown as { env: Record<string, string> }).env.VITE_BUILD ?? "dev";
@@ -20,6 +20,7 @@ async function boot() {
   world.addChild(mapLayer, chars.root);
   app.stage.addChild(world);
 
+  chars.textures = characterTextures();
   const cam = new Camera(8), tracks = new Tracks();
   let fitted = false, mapW = 60, mapH = 40, renderTick = 0, latestTick = 0, speed = 1, paused = false, crew = 0;
   const hud = document.getElementById("hud")!, footer = document.getElementById("footer")!;
@@ -29,7 +30,7 @@ async function boot() {
   transport.onMessage((m: ServerMsg) => {
     if (m.t === "snapshot") {
       mapLayer.removeChildren();
-      mapLayer.addChild(new Sprite(canvasTexture(buildTileCanvas(m.w, m.h, m.tiles, m.furniture))));
+      mapLayer.addChild(new Sprite(canvasTexture(buildTileCanvas(m.w, m.h, m.tiles, m.rooms))));
       mapW = m.w; mapH = m.h; crew = m.chars.length;
       chars.reset(m.chars); tracks.reset(m.chars);
       renderTick = latestTick = m.tick;

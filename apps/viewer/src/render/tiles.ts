@@ -1,22 +1,37 @@
-import { Texture } from "pixi.js";
-import type { FurnitureSnap } from "@wc/protocol";
+import { Rectangle, Texture } from "pixi.js";
+import type { RoomSnap } from "@wc/protocol";
+import { buildAtlas } from "./sprites";
+import { bakeLighting, type Light } from "./light";
 
 export const TILE = 16;
 // TileKind order: Void, Floor, Wall, Door, Bed, Console, Table, Plant, Airlock
-const FLAT = ["#07080b", "#1b2028", "#3a4350", "#245f73", "#4b5a6e", "#1d2b35", "#3b3f48", "#1f5a3a", "#8a4a1c"];
+const LIGHT_BY_KIND: Record<number, Omit<Light, "x" | "y"> | undefined> = {
+  5: { r: 34, i: 0.8, c: [60, 200, 255] }, 7: { r: 26, i: 0.5, c: [60, 255, 150] },
+  3: { r: 20, i: 0.5, c: [255, 60, 60] }, 8: { r: 46, i: 0.8, c: [255, 140, 40] },
+};
 
-export function buildTileCanvas(w: number, h: number, tiles: number[], _furniture: FurnitureSnap[]): HTMLCanvasElement {
-  const cv = document.createElement("canvas");
-  cv.width = w * TILE; cv.height = h * TILE;
-  const g = cv.getContext("2d")!;
-  g.imageSmoothingEnabled = false;
-  for (let y = 0; y < h; y++)
-    for (let x = 0; x < w; x++) {
-      const k = tiles[y * w + x];
-      g.fillStyle = FLAT[k] ?? FLAT[0];
-      g.fillRect(x * TILE, y * TILE, TILE, TILE);
-      if (k === 1) { g.fillStyle = "rgba(255,255,255,.035)"; g.fillRect(x * TILE, y * TILE, TILE, 1); g.fillRect(x * TILE, y * TILE, 1, TILE); }
+export function buildTileCanvas(w: number, h: number, tiles: number[], rooms: RoomSnap[]): HTMLCanvasElement {
+  const atlas = buildAtlas();
+  const W = w * TILE, H = h * TILE;
+  const data = new Uint8ClampedArray(W * H * 4);
+  for (let ty = 0; ty < h; ty++) for (let tx = 0; tx < w; tx++) {
+    const f = atlas.frames[`tile:${tiles[ty * w + tx]}`] ?? atlas.frames["tile:0"];
+    for (let y = 0; y < TILE; y++) {
+      const src = ((f.y + y) * atlas.width + f.x) * 4;
+      data.set(atlas.data.subarray(src, src + TILE * 4), ((ty * TILE + y) * W + tx * TILE) * 4);
     }
+  }
+  const lights: Light[] = [];
+  for (let ty = 0; ty < h; ty++) for (let tx = 0; tx < w; tx++) {
+    const l = LIGHT_BY_KIND[tiles[ty * w + tx]];
+    if (l) lights.push({ x: tx * TILE + 8, y: ty * TILE + 8, ...l });
+  }
+  for (const r of rooms) lights.push({ x: (r.x + r.w / 2) * TILE, y: (r.y + r.h / 2) * TILE, r: Math.max(r.w, r.h) * TILE * 0.55, i: 0.55, c: [255, 170, 90] });
+  for (let x = 4; x < w; x += 9) lights.push({ x: x * TILE, y: 19 * TILE, r: 70, i: 0.55, c: [255, 170, 90] });
+  bakeLighting(data, W, H, lights, 0.4);
+  const cv = document.createElement("canvas");
+  cv.width = W; cv.height = H;
+  cv.getContext("2d")!.putImageData(new ImageData(new Uint8ClampedArray(data), W, H), 0, 0);
   return cv;
 }
 
@@ -24,4 +39,16 @@ export function canvasTexture(cv: HTMLCanvasElement): Texture {
   const t = Texture.from(cv);
   t.source.scaleMode = "nearest";
   return t;
+}
+
+/** Character frames from the generated atlas: `char:<dept>:<variant>`. */
+export function characterTextures(): Map<string, Texture> {
+  const atlas = buildAtlas();
+  const cv = document.createElement("canvas");
+  cv.width = atlas.width; cv.height = atlas.height;
+  cv.getContext("2d")!.putImageData(new ImageData(new Uint8ClampedArray(atlas.data), atlas.width, atlas.height), 0, 0);
+  const base = canvasTexture(cv);
+  const out = new Map<string, Texture>();
+  for (const [name, f] of Object.entries(atlas.frames)) out.set(name, new Texture({ source: base.source, frame: new Rectangle(f.x, f.y, f.w, f.h) }));
+  return out;
 }
