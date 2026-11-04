@@ -1,0 +1,1 @@
+{ "compilerOptions": { "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler", "strict": true, "noUncheckedIndexedAccess": false, "skipLibCheck": true, "esModuleInterop": true, "lib": ["ES2022","DOM","WebWorker"], "types": [], "noEmit": true, "paths": { "@wc/protocol": ["./packages/protocol/src/index.ts"], "@wc/sim-core": ["./packages/sim-core/src/index.ts"] } } }

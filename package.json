@@ -1,0 +1,13 @@
+{
+  "name": "waystation-crew",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "bench": "tsx tools/bench/agents.bench.ts",
+    "dev": "pnpm --filter @wc/viewer dev",
+    "build": "pnpm --filter @wc/viewer build"
+  },
+  "devDependencies": { "typescript": "^5.6.0", "vitest": "^2.1.0", "tsx": "^4.19.0" }
+}
