@@ -12,6 +12,7 @@ export interface CharStore {
   dept: Uint8Array; rank: Uint8Array; state: Uint8Array;
   hunger: Float32Array; energy: Float32Array; social: Float32Array; hygiene: Float32Array; fun: Float32Array;
   nextDecideTick: Int32Array;
+  job: Int32Array;
   names: string[];
   name(id: number): string;
 }
@@ -24,6 +25,7 @@ export function createCharStore(cap = 256): CharStore {
   for (const k of F32) s[k] = new Float32Array(cap);
   for (const k of U8) s[k] = new Uint8Array(cap);
   s.nextDecideTick = new Int32Array(cap);
+  s.job = new Int32Array(cap).fill(-1);
   s.name = (id: number) => s.names[id];
   return s as CharStore;
 }
@@ -34,6 +36,7 @@ function grow(s: CharStore): void {
   for (const k of F32) { const n = new Float32Array(cap); n.set(g[k]); g[k] = n; }
   for (const k of U8) { const n = new Uint8Array(cap); n.set(g[k]); g[k] = n; }
   const nd = new Int32Array(cap); nd.set(s.nextDecideTick); s.nextDecideTick = nd;
+  const jb = new Int32Array(cap).fill(-1); jb.set(s.job); s.job = jb;
   s.cap = cap;
 }
 

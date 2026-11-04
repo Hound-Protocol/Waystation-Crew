@@ -3,6 +3,7 @@ import { buildStarterStation, type Station } from "./station/starter";
 import type { Point } from "./station/tilemap";
 import type { Action } from "./ai/affordances";
 import { decayNeeds } from "./ai/needs";
+import { buildJobPosts, type JobPost } from "./org/jobs";
 import { stepMovement } from "./ai/move";
 import { stepAI, stepActions } from "./ai/decide";
 import { createCharStore, hashChars, type CharStore } from "./ecs";
@@ -18,6 +19,8 @@ export interface World {
   furnitureByKind: Map<number, number[]>;
   reservations: Map<number, number>; // furnitureId -> charId
   actions: Array<Action | null>;
+  posts: JobPost[];
+  postHolder: Map<number, number>; // postId -> charId
   stats: { decisions: number };
   recordEvents: boolean;
   events: WorldEvent[];
@@ -38,7 +41,7 @@ export function createWorld(seed: number, station: Station = buildStarterStation
   }
   return {
     seed, tick: 0, rng: createRng(seed), chars: createCharStore(), station, furnitureByKind,
-    reservations: new Map(), actions: [], stats: { decisions: 0 }, recordEvents: false, events: [], hashers: [],
+    reservations: new Map(), actions: [], posts: buildJobPosts(station), postHolder: new Map(), stats: { decisions: 0 }, recordEvents: false, events: [], hashers: [],
   };
 }
 

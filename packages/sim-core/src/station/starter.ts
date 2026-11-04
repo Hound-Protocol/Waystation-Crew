@@ -62,6 +62,8 @@ export function buildStarterStation(): Station {
   for (let i = 0; i < 3; i++) put(cargo, TileKind.Console, 3 + i * 3, 22);
   const galley = bottom("Galley", 13, 14, 19);
   for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) put(galley, TileKind.Table, 15 + i * 4, 23 + j * 4);
+  put(galley, TileKind.Console, 15, 21);
+  put(galley, TileKind.Console, 17, 21);
   put(galley, TileKind.Plant, 15, 36);
   const hab = bottom("Habitation", 27, 32, 19);
   for (let row = 0; row < 8; row++)

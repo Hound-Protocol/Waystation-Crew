@@ -2,6 +2,7 @@ import type { World } from "../world";
 import { findPath } from "../station/nav";
 import { interactionPoint } from "../station/starter";
 import { isWalkable, type Point } from "../station/tilemap";
+import { shiftOf } from "../org/jobs";
 import { AFFORDANCES, ActionKind, stateForAction, type Action } from "./affordances";
 
 const SAMPLE = 8;
@@ -42,6 +43,17 @@ export function scoreOptions(world: World, id: number): Scored[] {
       action: { kind: aff.kind, furnitureId: bestIdx, path, ticksLeft: aff.durationTicks },
       score,
       why: `${aff.satisfies}=${need.toFixed(2)} urgency ${urgency.toFixed(2)}, ${path.length} tiles away`,
+    });
+  }
+  const post = c.job[id] >= 0 ? world.posts[c.job[id]] : null;
+  if (post && post.shift === shiftOf(world.tick) && !world.reservations.has(post.workstationFurnitureId)) {
+    const f = world.station.furniture[post.workstationFurnitureId];
+    const ip = interactionPoint(map, f);
+    const path = ip ? findPath(map, from, ip) : null;
+    if (path) out.push({
+      action: { kind: ActionKind.Work, furnitureId: f.id, path, ticksLeft: 1800 },
+      score: 0.35 - 0.0005 * path.length,
+      why: `on ${post.shift} shift at workstation ${f.id}`,
     });
   }
   return out.sort((a, b) => b.score - a.score);
@@ -88,7 +100,7 @@ export function stepActions(world: World): void {
       arr[id] = Math.min(1, arr[id] + aff.amountPerTick);
       a.ticksLeft--;
       if (a.ticksLeft > 0 && arr[id] < 0.98) continue;
-    } else if (a.kind === ActionKind.Idle && --a.ticksLeft > 0) continue;
+    } else if ((a.kind === ActionKind.Idle || a.kind === ActionKind.Work) && --a.ticksLeft > 0) continue;
     if (a.furnitureId >= 0 && world.reservations.get(a.furnitureId) === id) world.reservations.delete(a.furnitureId);
     world.actions[id] = null;
     c.state[id] = 0;
