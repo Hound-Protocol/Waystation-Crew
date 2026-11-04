@@ -55,4 +55,26 @@ describe("movement", () => {
     stepMovement(w);
     expect(w.events[0]).toMatchObject({ type: "moved" });
   });
+  it("does not walk through a stationary character: steps around in open space", () => {
+    const { w, id } = setup();
+    const other = addCharacter(w, { name: "S", dept: Department.Service, rank: Rank.Trainee, x: 3, y: 2 });
+    const seen = new Set<string>();
+    for (let t = 0; t < 12; t++) { stepMovement(w); if (w.chars.x[id] === w.chars.x[other] && w.chars.y[id] === w.chars.y[other]) seen.add("overlap"); }
+    expect(seen.size).toBe(0);
+    expect([w.chars.x[id], w.chars.y[id]]).toEqual([6, 2]);
+  });
+  it("waits in a one-tile corridor behind a stationary character, then pushes through (no deadlock)", () => {
+    const map = createTilemap(7, 3);
+    for (let x = 0; x < 7; x++) map.set(x, 1, TileKind.Floor);
+    const w = createWorld(1, { map, rooms: [], furniture: [] });
+    const a = addCharacter(w, { name: "A", dept: Department.Service, rank: Rank.Trainee, x: 0, y: 1 });
+    addCharacter(w, { name: "B", dept: Department.Service, rank: Rank.Trainee, x: 3, y: 1 });
+    w.actions[a] = { kind: ActionKind.Wander, furnitureId: -1, path: findPath(map, { x: 0, y: 1 }, { x: 6, y: 1 })!, ticksLeft: 0 };
+    for (let t = 0; t < 2; t++) stepMovement(w);
+    expect(w.chars.x[a]).toBe(2); // stopped short of B instead of stepping onto it
+    stepMovement(w); stepMovement(w);
+    expect(w.chars.x[a]).toBe(2); // keeps waiting for a few ticks
+    for (let t = 0; t < 30; t++) stepMovement(w);
+    expect(w.chars.x[a]).toBe(6); // eventually gets through
+  });
 });

@@ -9,11 +9,31 @@ function dirOf(a: Point, b: Point, fallback: Dir): Dir {
   return fallback;
 }
 
-/** path[0] is reached at startTick, path[i] at startTick+i. Clamped at both ends. */
+const CORNER = 0.4; // corner cut radius in tiles (< 0.5 so neighbouring corners never overlap)
+const sgn = (v: number) => (v > 0 ? 1 : v < 0 ? -1 : 0);
+const domDir = (dx: number, dy: number, fallback: Dir): Dir =>
+  Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? "right" : dx < 0 ? "left" : fallback) : dy > 0 ? "down" : "up";
+
+/**
+ * path[0] is reached at startTick, path[i] at startTick+i. Clamped at both ends.
+ * Straight runs move at a constant 1 tile/tick; turns follow a quadratic curve that cuts each corner.
+ */
 export function interpolatePath(path: Point[], startTick: number, nowTicks: number): Pose | null {
   if (path.length === 0) return null;
   if (path.length === 1) return { x: path[0].x, y: path[0].y, dir: "down" };
   const t = Math.min(path.length - 1, Math.max(0, nowTicks - startTick));
+  const v = Math.round(t);
+  if (v > 0 && v < path.length - 1 && Math.abs(t - v) < CORNER) {
+    const V = path[v], A = path[v - 1], B = path[v + 1];
+    const dix = sgn(V.x - A.x), diy = sgn(V.y - A.y), dox = sgn(B.x - V.x), doy = sgn(B.y - V.y);
+    if (dix !== dox || diy !== doy) {
+      const u = (t - (v - CORNER)) / (2 * CORNER), r = CORNER, q = 1 - u;
+      const p0x = V.x - r * dix, p0y = V.y - r * diy, p2x = V.x + r * dox, p2y = V.y + r * doy;
+      const x = q * q * p0x + 2 * q * u * V.x + u * u * p2x, y = q * q * p0y + 2 * q * u * V.y + u * u * p2y;
+      const tx = 2 * q * (V.x - p0x) + 2 * u * (p2x - V.x), ty = 2 * q * (V.y - p0y) + 2 * u * (p2y - V.y);
+      return { x, y, dir: domDir(tx, ty, "down") };
+    }
+  }
   const i = Math.min(path.length - 2, Math.floor(t)), f = t - i;
   const a = path[i], b = path[i + 1];
   return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, dir: dirOf(a, b, "down") };

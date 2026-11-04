@@ -43,3 +43,30 @@ describe("Tracks", () => {
     expect(t.positionAt(5, 1)).toBeNull();
   });
 });
+
+describe("rounded corners", () => {
+  const path = [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 2, y: 1 }, { x: 2, y: 2 }];
+  it("keeps straight runs exact and starts/ends exactly on the path", () => {
+    expect(interpolatePath(path, 0, 0.25)).toMatchObject({ x: 0.25, y: 0 });
+    expect(interpolatePath(path, 0, 0)).toMatchObject({ x: 0, y: 0 });
+    expect(interpolatePath(path, 0, 4)).toMatchObject({ x: 2, y: 2 });
+    expect(interpolatePath(path, 0, 3.5)).toMatchObject({ x: 2, y: 1.5 });
+  });
+  it("cuts the corner smoothly instead of a sharp turn", () => {
+    const p = interpolatePath(path, 0, 2)!;
+    expect(p.x).toBeLessThan(2); expect(p.y).toBeGreaterThan(0);
+    expect(Math.hypot(p.x - 2, p.y - 0)).toBeLessThan(0.25);
+  });
+  it("moves continuously: no jumps and gentle heading changes through the turn", () => {
+    let prev = interpolatePath(path, 0, 0)!, prevAng = 0;
+    for (let t = 0.01; t <= 4; t += 0.01) {
+      const p = interpolatePath(path, 0, t)!;
+      const step = Math.hypot(p.x - prev.x, p.y - prev.y);
+      expect(step).toBeLessThan(0.0125); expect(step).toBeGreaterThan(0.006);
+      const ang = Math.atan2(p.y - prev.y, p.x - prev.x);
+      if (t > 0.02) expect(Math.abs(ang - prevAng)).toBeLessThan(0.2);
+      prev = p; prevAng = ang;
+    }
+  });
+});
+

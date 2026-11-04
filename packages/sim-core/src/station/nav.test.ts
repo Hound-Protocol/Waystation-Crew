@@ -33,6 +33,37 @@ describe("findPath", () => {
   });
 });
 
+const turns = (from: { x: number; y: number }, p: Array<{ x: number; y: number }>) => {
+  let n = 0, prev = from, pd = "";
+  for (const q of p) { const d = `${q.x - prev.x},${q.y - prev.y}`; if (pd && d !== pd) n++; pd = d; prev = q; }
+  return n;
+};
+describe("findPath quality", () => {
+  it("prefers straight runs: shortest path with a single turn, not a staircase", () => {
+    const from = { x: 0, y: 0 }, p = findPath(open(12, 12), from, { x: 6, y: 5 })!;
+    expect(p.length).toBe(11);
+    expect(turns(from, p)).toBe(1);
+  });
+  it("walks around furniture-like beds when a floor detour exists", () => {
+    const m = open(9, 3);
+    for (const x of [2, 3, 4]) m.set(x, 1, TileKind.Bed);
+    const p = findPath(m, { x: 0, y: 1 }, { x: 6, y: 1 })!;
+    expect(p.some((q) => m.get(q.x, q.y) === TileKind.Bed)).toBe(false);
+  });
+  it("still crosses beds when that is the only way, and may end on one", () => {
+    const m = open(5, 1); m.set(2, 0, TileKind.Bed);
+    expect(findPath(m, { x: 0, y: 0 }, { x: 4, y: 0 })!.length).toBe(4);
+    expect(findPath(m, { x: 0, y: 0 }, { x: 2, y: 0 })!.length).toBe(2);
+  });
+  it("routes around tiles the caller marks blocked, but never blocks the goal", () => {
+    const m = open(5, 3);
+    const blocked = (x: number, y: number) => x === 2 && y === 1;
+    const p = findPath(m, { x: 0, y: 1 }, { x: 4, y: 1 }, blocked)!;
+    expect(p.some((q) => q.x === 2 && q.y === 1)).toBe(false);
+    expect(findPath(m, { x: 0, y: 1 }, { x: 2, y: 1 }, blocked)!.length).toBe(2);
+  });
+});
+
 describe("starter station", () => {
   const st = buildStarterStation();
   it("has at least 100 beds in Habitation", () => {

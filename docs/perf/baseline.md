@@ -11,3 +11,6 @@
 
 Budget: p95 tick <= 50 ms at 10,000 characters (1 tick = 1 sim second, so 1x speed has ~950 ms of headroom). Met.
 Known cost centres: A* allocates per call; reservation sampling is O(8) per option. Max spikes are first-tick/GC. Optimise A* buffers (generation-stamped reuse) if the budget is ever missed.
+
+## After straight-biased A* + avoidance
+10k chars p95 ~100 ms (was 36 ms). v1 target is 100 chars; revisit when scaling.

@@ -9,6 +9,7 @@ export interface Action {
   furnitureId: number; // -1 when none
   path: Point[];       // remaining steps; empty once arrived
   ticksLeft: number;
+  waited?: number;     // ticks spent waiting for a blocked tile
 }
 
 export interface Affordance {
