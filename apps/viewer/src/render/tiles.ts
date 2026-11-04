@@ -28,7 +28,7 @@ export function buildTileCanvas(w: number, h: number, tiles: number[], rooms: Ro
   }
   for (const r of rooms) lights.push({ x: (r.x + r.w / 2) * TILE, y: (r.y + r.h / 2) * TILE, r: Math.max(r.w, r.h) * TILE * 0.55, i: 0.55, c: [255, 170, 90] });
   for (let x = 4; x < w; x += 9) lights.push({ x: x * TILE, y: 19 * TILE, r: 70, i: 0.55, c: [255, 170, 90] });
-  bakeLighting(data, W, H, lights, 0.4);
+  bakeLighting(data, W, H, lights, 0.5);
   const cv = document.createElement("canvas");
   cv.width = W; cv.height = H;
   cv.getContext("2d")!.putImageData(new ImageData(new Uint8ClampedArray(data), W, H), 0, 0);

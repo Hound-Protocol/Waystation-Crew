@@ -10,9 +10,14 @@ import { zoomLevel } from "./render/lod";
 
 const BUILD = (import.meta as unknown as { env: Record<string, string> }).env.VITE_BUILD?.slice(0, 7) ?? "dev";
 
+function showError(msg: string) {
+  const el = document.getElementById("hud");
+  if (el) el.innerHTML = `<b>${STATION_NAME}</b><br><span style="color:#ff6a6a">${msg}</span>`;
+}
+
 async function boot() {
   const app = new Application();
-  await app.init({ resizeTo: window, background: "#07080b", antialias: false, autoDensity: true, resolution: Math.min(window.devicePixelRatio || 1, 2) });
+  await app.init({ preference: "webgl", resizeTo: window, background: "#07080b", antialias: false, autoDensity: true, resolution: Math.min(window.devicePixelRatio || 1, 2) });
   document.getElementById("app")!.appendChild(app.canvas);
 
   const world = new Container();
@@ -44,12 +49,17 @@ async function boot() {
       mapW = m.w; mapH = m.h; crew = m.chars.length;
       chars.reset(m.chars); tracks.reset(m.chars); panel.setChars(m.chars); if (selected !== null) select(null);
       renderTick = latestTick = m.tick;
-      if (!fitted) { cam.fit(mapW, mapH, app.screen.width, app.screen.height); fitted = true; }
+      if (!fitted) {
+        cam.fit(mapW, mapH, app.screen.width, app.screen.height);
+        if (cam.scale < 10) { cam.zoomAt(app.screen.width / 2, app.screen.height / 2, 10 / cam.scale); cam.centerOn(53, 12, app.screen.width, app.screen.height); }
+        fitted = true;
+      }
     } else if (m.t === "delta") {
       tracks.apply(m.moves); tracks.prune(m.tick - 120); latestTick = m.tick; speed = m.clock.speed; paused = m.clock.paused;
       panel.updateStates(m.states); panel.setClock(paused);
     } else if (m.id === selected) panel.setInspect(m.lines);
   });
+  setTimeout(() => { if (!fitted) showError("The simulation did not start (worker blocked or unsupported browser)."); }, 6000);
   transport.send({ t: "subscribe", viewport: { x: 0, y: 0, w: mapW, h: mapH, zoom: 3 } });
 
   // input: wheel zoom, drag pan, pinch zoom
@@ -95,4 +105,4 @@ async function boot() {
   });
   (window as unknown as { __wc: unknown }).__wc = { cam, transport };
 }
-boot();
+boot().catch((e) => showError(`Could not start the renderer: ${e instanceof Error ? e.message : e}`));
