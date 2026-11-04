@@ -1,0 +1,66 @@
+import { Container, Sprite, Texture } from "pixi.js";
+import { DEPT_COLOR, SKIN } from "./colors";
+import { TILE } from "./tiles";
+import type { Tracks } from "./interp";
+import type { Camera } from "./camera";
+import { lodStyle, zoomLevel, type LodStyle } from "./lod";
+
+interface View { body: Sprite; head: Sprite; dept: number }
+const STYLES: LodStyle[] = ["dot", "column", "silhouette", "sprite"];
+
+/** One layer per LOD style; layers crossfade (~120 ms) when the zoom level changes. */
+export class CharLayer {
+  readonly root = new Container();
+  private layers = new Map<LodStyle, { c: Container; views: View[]; alpha: number }>();
+  private ids: number[] = [];
+  private depts: number[] = [];
+  style: LodStyle = "dot";
+  constructor() {
+    for (const s of STYLES) { const c = new Container(); c.visible = s === "dot"; this.root.addChild(c); this.layers.set(s, { c, views: [], alpha: s === "dot" ? 1 : 0 }); }
+  }
+  reset(chars: Array<{ id: number; dept: number }>) {
+    this.ids = chars.map((c) => c.id); this.depts = chars.map((c) => c.dept);
+    for (const l of this.layers.values()) { l.c.removeChildren(); l.views = []; }
+  }
+  private ensure(style: LodStyle) {
+    const l = this.layers.get(style)!;
+    while (l.views.length < this.ids.length) {
+      const i = l.views.length;
+      const body = new Sprite(Texture.WHITE), head = new Sprite(Texture.WHITE);
+      body.tint = DEPT_COLOR[this.depts[i]] ?? 0xffffff; head.tint = SKIN;
+      if (style === "dot") { body.width = TILE * 0.9; body.height = TILE * 0.9; body.anchor.set(0.5); head.visible = false; }
+      else if (style === "column") { body.width = TILE * 0.5; body.height = TILE * 0.8; body.anchor.set(0.5, 1); head.visible = false; }
+      else {
+        body.width = TILE * 0.38; body.height = TILE * 0.5; body.anchor.set(0.5, 1);
+        head.width = TILE * 0.3; head.height = TILE * 0.3; head.anchor.set(0.5, 1);
+      }
+      l.c.addChild(body); if (style === "silhouette" || style === "sprite") l.c.addChild(head);
+      l.views.push({ body, head, dept: this.depts[i] });
+    }
+  }
+  update(dt: number, renderTick: number, tracks: Tracks, cam: Camera, viewW: number, viewH: number) {
+    const target = lodStyle(zoomLevel(cam.scale));
+    if (target !== this.style) { this.style = target; }
+    for (const [s, l] of this.layers) {
+      const goal = s === target ? 1 : 0;
+      l.alpha += Math.sign(goal - l.alpha) * Math.min(Math.abs(goal - l.alpha), dt / 0.12);
+      l.c.alpha = l.alpha; l.c.visible = l.alpha > 0.01;
+    }
+    const x0 = -cam.tx / cam.scale - 2, y0 = -cam.ty / cam.scale - 2, x1 = x0 + viewW / cam.scale + 4, y1 = y0 + viewH / cam.scale + 4;
+    for (const [s, l] of this.layers) {
+      if (!l.c.visible) continue;
+      this.ensure(s);
+      for (let i = 0; i < this.ids.length; i++) {
+        const v = l.views[i];
+        const p = tracks.positionAt(this.ids[i], renderTick);
+        const vis = !!p && p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1;
+        v.body.visible = vis; if (s === "silhouette" || s === "sprite") v.head.visible = vis;
+        if (!vis || !p) continue;
+        const px = (p.x + 0.5) * TILE, py = (p.y + 0.5) * TILE;
+        if (s === "dot") { v.body.position.set(px, py); }
+        else if (s === "column") { v.body.position.set(px, py + TILE * 0.4); }
+        else { v.body.position.set(px, py + TILE * 0.45); v.head.position.set(px, py + TILE * 0.45 - TILE * 0.5); }
+      }
+    }
+  }
+}
