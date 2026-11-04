@@ -8,7 +8,7 @@ import { buildTileCanvas, canvasTexture, characterTextures, TILE } from "./rende
 import { DevPanel } from "./ui/devpanel";
 import { zoomLevel } from "./render/lod";
 
-const BUILD = (import.meta as unknown as { env: Record<string, string> }).env.VITE_BUILD ?? "dev";
+const BUILD = (import.meta as unknown as { env: Record<string, string> }).env.VITE_BUILD?.slice(0, 7) ?? "dev";
 
 async function boot() {
   const app = new Application();
