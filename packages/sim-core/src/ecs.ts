@@ -47,7 +47,8 @@ export function addCharacter(
   s.x[id] = init.x; s.y[id] = init.y;
   s.dept[id] = init.dept; s.rank[id] = init.rank; s.state[id] = 0;
   s.hunger[id] = s.energy[id] = s.social[id] = s.hygiene[id] = s.fun[id] = 1;
-  s.nextDecideTick[id] = world.tick;
+  s.nextDecideTick[id] = world.tick + world.rng.int(0, 29);
+  world.actions.push(null);
   s.names[id] = init.name;
   return id;
 }
