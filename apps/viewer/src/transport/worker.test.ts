@@ -11,7 +11,7 @@ function loopbackWorker(host: SimHost): WorkerLike {
   };
   return w;
 }
-const collect = (host = new SimHost({ seed: 1, population: 20 })) => {
+const collect = (host = new SimHost({ seed: 1, population: 20, budgetMs: Infinity })) => {
   const t = createWorkerTransport(loopbackWorker(host));
   const got: ServerMsg[] = [];
   t.onMessage((m) => got.push(m));
@@ -34,7 +34,7 @@ describe("worker transport", () => {
     expect(d!.tick).toBe(30);
   });
   it("a 300 s hidden-tab gap becomes one bounded coalesced delta", () => {
-    const host = new SimHost({ seed: 1, population: 20 });
+    const host = new SimHost({ seed: 1, population: 20, budgetMs: Infinity });
     host.handle({ t: "subscribe", viewport: { x: 0, y: 0, w: 60, h: 40, zoom: 3 } });
     const d = host.advanceReal(300)!;
     expect(d.t === "delta" && d.tick).toBe(300);
@@ -42,7 +42,7 @@ describe("worker transport", () => {
     expect(big.tick - 300).toBeLessThanOrEqual(600);
   });
   it("dev commands: pause stops time, speed scales it, spawn adds characters, reset reseeds", () => {
-    const host = new SimHost({ seed: 1, population: 10 });
+    const host = new SimHost({ seed: 1, population: 10, budgetMs: Infinity });
     host.handle({ t: "subscribe", viewport: { x: 0, y: 0, w: 60, h: 40, zoom: 3 } });
     host.handle({ t: "devCmd", cmd: { c: "pause" } });
     expect(host.advanceReal(10)).toBeNull();
@@ -55,7 +55,7 @@ describe("worker transport", () => {
     expect(re.some((m) => m.t === "snapshot" && m.tick === 0)).toBe(true);
   });
   it("inspect returns the explanation for a character and nothing for unknown ids", () => {
-    const host = new SimHost({ seed: 1, population: 5 });
+    const host = new SimHost({ seed: 1, population: 5, budgetMs: Infinity });
     const out = host.handle({ t: "inspect", id: 2 });
     expect(out[0].t === "inspect" && out[0].lines.length).toBeGreaterThan(1);
     const none = host.handle({ t: "inspect", id: null });
@@ -65,7 +65,7 @@ describe("worker transport", () => {
     expect(host.inspectMsg()?.t).toBe("inspect");
   });
   it("pause and speed commands are acknowledged with the new clock", () => {
-    const host = new SimHost({ seed: 1, population: 5 });
+    const host = new SimHost({ seed: 1, population: 5, budgetMs: Infinity });
     const p = host.handle({ t: "devCmd", cmd: { c: "pause" } });
     expect(p[0]).toMatchObject({ t: "delta", clock: { paused: true } });
     const s = host.handle({ t: "devCmd", cmd: { c: "speed", mult: 10 } });
@@ -81,7 +81,7 @@ describe("worker transport", () => {
     expect(host.speed).toBeLessThanOrEqual(600);
   });
   it("works with zero characters", () => {
-    const host = new SimHost({ seed: 1, population: 0 });
+    const host = new SimHost({ seed: 1, population: 0, budgetMs: Infinity });
     const out = host.handle({ t: "subscribe", viewport: { x: 0, y: 0, w: 60, h: 40, zoom: 3 } });
     expect(out[0].t === "snapshot" && out[0].chars.length).toBe(0);
     expect(() => host.advanceReal(60)).not.toThrow();
