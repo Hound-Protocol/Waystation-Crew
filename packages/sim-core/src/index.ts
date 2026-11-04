@@ -7,3 +7,4 @@ export * from "./station/tilemap";
 export * from "./station/nav";
 export * from "./station/starter";
 export * from "./ai/affordances"; export * from "./ai/decide";
+export * from "./ai/move";

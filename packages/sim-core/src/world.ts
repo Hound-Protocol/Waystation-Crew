@@ -3,6 +3,7 @@ import { buildStarterStation, type Station } from "./station/starter";
 import type { Point } from "./station/tilemap";
 import type { Action } from "./ai/affordances";
 import { decayNeeds } from "./ai/needs";
+import { stepMovement } from "./ai/move";
 import { stepAI, stepActions } from "./ai/decide";
 import { createCharStore, hashChars, type CharStore } from "./ecs";
 
@@ -45,6 +46,7 @@ export function step(world: World): void {
   world.tick += 1;
   decayNeeds(world);
   stepAI(world);
+  stepMovement(world);
   stepActions(world);
 }
 
