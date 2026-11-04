@@ -1,9 +1,11 @@
 import { createRng, type Rng } from "./rng";
+import { createCharStore, hashChars, type CharStore } from "./ecs";
 
 export interface World {
   seed: number;
   tick: number;
   rng: Rng;
+  chars: CharStore;
   /** extension point: hash contributors registered by subsystems */
   hashers: Array<(h: Hasher) => void>;
 }
@@ -14,7 +16,7 @@ export interface Hasher {
 }
 
 export function createWorld(seed: number): World {
-  return { seed, tick: 0, rng: createRng(seed), hashers: [] };
+  return { seed, tick: 0, rng: createRng(seed), chars: createCharStore(), hashers: [] };
 }
 
 export function step(world: World): void {
@@ -33,6 +35,7 @@ export function hashWorld(world: World): number {
   };
   const hasher: Hasher = { num, arr: (a, len) => { for (let i = 0; i < len; i++) num(a[i]); } };
   num(world.seed); num(world.tick); num(world.rng.state());
+  hashChars(world.chars, hasher);
   for (const f of world.hashers) f(hasher);
   return h >>> 0;
 }
