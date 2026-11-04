@@ -64,6 +64,22 @@ describe("worker transport", () => {
     host.handle({ t: "inspect", id: 1 });
     expect(host.inspectMsg()?.t).toBe("inspect");
   });
+  it("pause and speed commands are acknowledged with the new clock", () => {
+    const host = new SimHost({ seed: 1, population: 5 });
+    const p = host.handle({ t: "devCmd", cmd: { c: "pause" } });
+    expect(p[0]).toMatchObject({ t: "delta", clock: { paused: true } });
+    const s = host.handle({ t: "devCmd", cmd: { c: "speed", mult: 10 } });
+    expect(s[0]).toMatchObject({ t: "delta", clock: { speed: 10, paused: true } });
+  });
+  it("a wall-time budget stops a slow catch-up early instead of locking the worker", () => {
+    let now = 0;
+    const host = new SimHost({ seed: 1, population: 5, now: () => (now += 20), budgetMs: 50 });
+    const d = host.advanceReal(500)!;
+    expect(d.tick).toBeLessThan(10);
+    expect(d.tick).toBeGreaterThan(0);
+    host.handle({ t: "devCmd", cmd: { c: "speed", mult: 1e9 } });
+    expect(host.speed).toBeLessThanOrEqual(600);
+  });
   it("works with zero characters", () => {
     const host = new SimHost({ seed: 1, population: 0 });
     const out = host.handle({ t: "subscribe", viewport: { x: 0, y: 0, w: 60, h: 40, zoom: 3 } });

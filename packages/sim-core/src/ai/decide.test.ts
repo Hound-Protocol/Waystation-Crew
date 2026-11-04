@@ -5,7 +5,7 @@ import { Department } from "../org/departments";
 import { Rank } from "../org/ranks";
 import { TileKind, createTilemap } from "../station/tilemap";
 import { buildStarterStation, type Station } from "../station/starter";
-import { stepAI } from "./decide";
+import { stepAI, stepActions } from "./decide";
 import { ActionKind } from "./affordances";
 
 function tiny(kinds: TileKind[]): Station {
@@ -64,5 +64,15 @@ describe("decide", () => {
     const id = spawn(w, 10, 18);
     stepMany(w, 3600);
     expect(w.chars.hunger[id]).toBeLessThan(1);
+  });
+  it("a sleeper wakes up when starving instead of sleeping through hunger", () => {
+    const w = createWorld(1, tiny([TileKind.Bed]));
+    const id = spawn(w, 2, 1);
+    w.actions[id] = { kind: ActionKind.Sleep, furnitureId: 0, path: [], ticksLeft: 28_800 };
+    w.reservations.set(0, id);
+    w.chars.energy[id] = 0.3; w.chars.hunger[id] = 0.05;
+    stepActions(w);
+    expect(w.actions[id]).toBeNull();
+    expect(w.reservations.has(0)).toBe(false);
   });
 });

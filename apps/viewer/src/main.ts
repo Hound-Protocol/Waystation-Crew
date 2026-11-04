@@ -46,7 +46,7 @@ async function boot() {
       renderTick = latestTick = m.tick;
       if (!fitted) { cam.fit(mapW, mapH, app.screen.width, app.screen.height); fitted = true; }
     } else if (m.t === "delta") {
-      tracks.apply(m.moves); latestTick = m.tick; speed = m.clock.speed; paused = m.clock.paused;
+      tracks.apply(m.moves); tracks.prune(m.tick - 120); latestTick = m.tick; speed = m.clock.speed; paused = m.clock.paused;
       panel.updateStates(m.states); panel.setClock(paused);
     } else if (m.id === selected) panel.setInspect(m.lines);
   });

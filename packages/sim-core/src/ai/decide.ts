@@ -100,7 +100,8 @@ export function stepActions(world: World): void {
       const arr = c[aff.satisfies];
       arr[id] = Math.min(1, arr[id] + aff.amountPerTick);
       a.ticksLeft--;
-      if (a.ticksLeft > 0 && arr[id] < 0.98) continue;
+      const starving = a.kind === ActionKind.Sleep && c.hunger[id] < 0.1;
+      if (a.ticksLeft > 0 && arr[id] < 0.98 && !starving) continue;
     } else if ((a.kind === ActionKind.Idle || a.kind === ActionKind.Work) && --a.ticksLeft > 0) continue;
     if (a.furnitureId >= 0 && world.reservations.get(a.furnitureId) === id) world.reservations.delete(a.furnitureId);
     world.actions[id] = null;

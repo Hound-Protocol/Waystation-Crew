@@ -29,6 +29,15 @@ describe("Tracks", () => {
     expect(t.positionAt(0, 50)).toMatchObject({ x: 2, y: 1 });
     expect(t.segmentCount(0)).toBe(0);
   });
+  it("prune drops segments that ended before the cutoff so a hidden tab cannot grow memory", () => {
+    const t = new Tracks();
+    t.reset([{ id: 0, x: 0, y: 0 }]);
+    for (let i = 0; i < 1000; i++) t.apply([{ id: 0, startTick: i * 2, from: P(0, 0), path: [P(1, 0)] }]);
+    expect(t.segmentCount(0)).toBe(1000);
+    t.prune(1900);
+    expect(t.segmentCount(0)).toBeLessThan(60);
+    expect(t.positionAt(0, 1999)).not.toBeNull();
+  });
   it("handles unknown ids and zero tracks", () => {
     const t = new Tracks();
     expect(t.positionAt(5, 1)).toBeNull();

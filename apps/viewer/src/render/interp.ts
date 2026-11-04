@@ -36,6 +36,17 @@ export class Tracks {
       tr.segs.push({ start: m.startTick, pts: [m.from, ...m.path] });
     }
   }
+  /** Drop segments that ended before `tick`, folding their end point into the base. Bounds memory when rendering is paused (hidden tab). */
+  prune(tick: number) {
+    for (const tr of this.t.values()) {
+      while (tr.segs.length) {
+        const s = tr.segs[0], end = s.start + s.pts.length - 1;
+        if (end >= tick) break;
+        tr.base = s.pts[s.pts.length - 1];
+        tr.segs.shift();
+      }
+    }
+  }
   segmentCount(id: number) { return this.t.get(id)?.segs.length ?? 0; }
   positionAt(id: number, tick: number): Pose | null {
     const tr = this.t.get(id);

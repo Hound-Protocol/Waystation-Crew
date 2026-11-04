@@ -2,6 +2,7 @@ import { createWorld, step, seedPopulation, arrive, explain, Department, type Wo
 import type { ClientMsg, ServerMsg, Move, StateChange } from "@wc/protocol";
 
 export const MAX_CATCHUP_TICKS = 600;
+export const MAX_SPEED = 600;
 
 export class SimHost {
   world: World;
@@ -9,7 +10,9 @@ export class SimHost {
   paused = false;
   private acc = 0;
   private inspectId: number | null = null;
-  constructor(private opts: { seed: number; population: number }) {
+  private now: () => number; private budgetMs: number;
+  constructor(private opts: { seed: number; population: number; now?: () => number; budgetMs?: number }) {
+    this.now = opts.now ?? (() => performance.now()); this.budgetMs = opts.budgetMs ?? 50;
     this.world = this.build(opts.seed);
   }
 
@@ -18,6 +21,10 @@ export class SimHost {
     seedPopulation(w, this.opts.population);
     w.recordEvents = true;
     return w;
+  }
+
+  private clockDelta(): Extract<ServerMsg, { t: "delta" }> {
+    return { t: "delta", tick: this.world.tick, moves: [], states: [], clock: { speed: this.speed, paused: this.paused } };
   }
 
   inspectMsg(): ServerMsg | null {
@@ -38,8 +45,8 @@ export class SimHost {
     if (msg.t === "inspect") { this.inspectId = msg.id; const m = this.inspectMsg(); return m ? [m] : []; }
     const cmd = msg.cmd;
     switch (cmd.c) {
-      case "pause": this.paused = !this.paused; return [];
-      case "speed": this.speed = Math.max(0.1, cmd.mult); return [];
+      case "pause": this.paused = !this.paused; return [this.clockDelta()];
+      case "speed": this.speed = Math.min(MAX_SPEED, Math.max(0.1, cmd.mult)); return [this.clockDelta()];
       case "spawn":
         for (let i = 0; i < cmd.count; i++) arrive(this.world, (cmd.dept ?? Department.Service) as Department);
         return [this.snapshot()];
@@ -59,9 +66,11 @@ export class SimHost {
     if (n <= 0) return null;
     const w = this.world, c = w.chars;
     const before = c.state.slice(0, c.count);
+    const t0 = this.now();
     const open = new Map<number, { move: Move; last: number }>();
     const moves: Move[] = [];
     for (let i = 0; i < n; i++) {
+      if (i > 0 && this.now() - t0 > this.budgetMs) { this.acc = 0; break; }
       step(w);
       for (const e of w.events) {
         if (e.type !== "moved") continue;
