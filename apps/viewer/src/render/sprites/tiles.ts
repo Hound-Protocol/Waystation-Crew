@@ -72,6 +72,6 @@ export function drawTile(kind: TileKind): Img {
     case TileKind.Table: return table();
     case TileKind.Plant: return plants();
     case TileKind.Airlock: return airlock();
-    default: { const im = new Img(); im.rect(0, 0, 15, 15, OUT); return im; }
+    default: return new Img(); // Void: transparent so space shows through
   }
 }

@@ -334,6 +334,10 @@ Separate admin route behind authentication, not part of the public site. Same co
 - Observability: tick time, entity counts, population, power, oxygen and food graphs, event log with filters, FPS and draw-call overlay, audio debug (active sounds), debug draw (paths, rooms, light radii, utility scores).
 - Safety: sandbox station for experiments; live-station changes need confirmation; feature flags.
 
+## 10b. Smoothness principle (binding)
+
+The entire UI must be smooth: every change eases in or out, and nothing pops in or out. Applies to camera (eased zoom, pan momentum, eased follow), character motion (a render clock that advances every frame), LOD changes (crossfades), spawns (fade-in), selection markers, panels and lists (transitions, keyed updates instead of rebuilds), and the first load (fade-in). New features must meet this before they ship.
+
 ## 11. Scaling plan
 - Cap per station ~2-3k characters; extra arrivals queue or go to a new station.
 - 10k characters = ~4 stations; station = unit of sharding (process or worker later).

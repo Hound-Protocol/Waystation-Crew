@@ -1,6 +1,7 @@
 import { Rectangle, Texture } from "pixi.js";
 import type { RoomSnap } from "@wc/protocol";
 import { buildAtlas } from "./sprites";
+import { wallIsVertical } from "./sprites/orient";
 import { bakeLighting, type Light } from "./light";
 
 export const TILE = 16;
@@ -15,7 +16,8 @@ export function buildTileCanvas(w: number, h: number, tiles: number[], rooms: Ro
   const W = w * TILE, H = h * TILE;
   const data = new Uint8ClampedArray(W * H * 4);
   for (let ty = 0; ty < h; ty++) for (let tx = 0; tx < w; tx++) {
-    const f = atlas.frames[`tile:${tiles[ty * w + tx]}`] ?? atlas.frames["tile:0"];
+    const k = tiles[ty * w + tx];
+    const f = (k === 2 && wallIsVertical(tiles, w, h, tx, ty) ? atlas.frames["tile:2:v"] : atlas.frames[`tile:${k}`]) ?? atlas.frames["tile:0"];
     for (let y = 0; y < TILE; y++) {
       const src = ((f.y + y) * atlas.width + f.x) * 4;
       data.set(atlas.data.subarray(src, src + TILE * 4), ((ty * TILE + y) * W + tx * TILE) * 4);

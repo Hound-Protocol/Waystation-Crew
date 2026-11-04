@@ -14,6 +14,8 @@ export class CharLayer {
   private layers = new Map<LodStyle, { c: Container; views: View[]; alpha: number }>();
   private ids: number[] = [];
   private depts: number[] = [];
+  private fade: number[] = [];
+  private known = new Set<number>();
   style: LodStyle = "dot";
   textures: Map<string, Texture> | null = null;
   constructor() {
@@ -21,6 +23,9 @@ export class CharLayer {
   }
   reset(chars: Array<{ id: number; dept: number }>) {
     this.ids = chars.map((c) => c.id); this.depts = chars.map((c) => c.dept);
+    const first = this.known.size === 0;
+    this.fade = this.ids.map((id) => (first || this.known.has(id) ? 1 : 0)); // newcomers fade in
+    this.known = new Set(this.ids);
     for (const l of this.layers.values()) { l.c.removeChildren(); l.views = []; }
   }
   private ensure(style: LodStyle) {
@@ -49,6 +54,7 @@ export class CharLayer {
       l.alpha += Math.sign(goal - l.alpha) * Math.min(Math.abs(goal - l.alpha), dt / 0.12);
       l.c.alpha = l.alpha; l.c.visible = l.alpha > 0.01;
     }
+    for (let i = 0; i < this.fade.length; i++) if (this.fade[i] < 1) this.fade[i] = Math.min(1, this.fade[i] + dt / 0.6);
     const x0 = -cam.tx / cam.scale - 2, y0 = -cam.ty / cam.scale - 2, x1 = x0 + viewW / cam.scale + 4, y1 = y0 + viewH / cam.scale + 4;
     for (const [s, l] of this.layers) {
       if (!l.c.visible) continue;
@@ -58,6 +64,7 @@ export class CharLayer {
         const p = tracks.positionAt(this.ids[i], renderTick);
         const vis = !!p && p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1;
         const spr = s === "sprite" && !!this.textures;
+        v.body.alpha = v.head.alpha = this.fade[i];
         v.body.visible = vis; if (s === "silhouette" || (s === "sprite" && !spr)) v.head.visible = vis;
         if (!vis || !p) continue;
         const px = (p.x + 0.5) * TILE, py = (p.y + 0.5) * TILE;

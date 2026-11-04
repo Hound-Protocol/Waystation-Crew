@@ -7,13 +7,13 @@ export interface DevPanelOpts { send: (m: ClientMsg) => void; onSelect: (id: num
 
 const CSS = `
 #devtoggle{position:fixed;right:8px;top:6px;z-index:11;background:#10151c;color:#4de1ff;border:1px solid #28445a;font:11px ui-monospace,monospace;padding:4px 8px;cursor:pointer}
-#dev{position:fixed;right:0;top:30px;bottom:0;width:min(300px,86vw);z-index:10;background:rgba(10,13,18,.93);border-left:1px solid #28445a;color:#9fb4c4;font:11px/1.35 ui-monospace,monospace;display:none;flex-direction:column;gap:6px;padding:8px;box-sizing:border-box}
-#dev.open{display:flex}
+#dev{position:fixed;right:0;top:30px;bottom:0;width:min(300px,86vw);z-index:10;background:rgba(10,13,18,.93);border-left:1px solid #28445a;color:#9fb4c4;font:11px/1.35 ui-monospace,monospace;display:flex;flex-direction:column;gap:6px;padding:8px;box-sizing:border-box;opacity:0;visibility:hidden;transform:translateX(16px);transition:opacity .22s ease,transform .22s ease,visibility 0s linear .22s}
+#dev.open{opacity:1;visibility:visible;transform:none;transition:opacity .22s ease,transform .22s ease,visibility 0s}
 #dev button,#dev select,#dev input{background:#161d27;color:#cfe3f0;border:1px solid #2c3f52;font:inherit;padding:3px 6px}
 #dev button{cursor:pointer}#dev button:hover{border-color:#4de1ff}
 #dev .row{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
 #dev .list{flex:1;min-height:80px;overflow:auto;border:1px solid #1e2b38}
-#dev .item{padding:2px 6px;cursor:pointer;white-space:nowrap}#dev .item:hover{background:#18222e}#dev .item.sel{background:#1d3a4a;color:#fff}
+#dev .item{padding:2px 6px;cursor:pointer;white-space:nowrap;transition:background .15s ease,color .15s ease}#dev .item:hover{background:#18222e}#dev .item.sel{background:#1d3a4a;color:#fff}
 #dev pre{margin:0;max-height:34vh;overflow:auto;white-space:pre-wrap;color:#b9d2e2;border:1px solid #1e2b38;padding:4px}
 #dev h4{margin:2px 0;color:#4de1ff;font-weight:normal}`;
 
@@ -66,6 +66,21 @@ export class DevPanel {
     this.lastRender = performance.now();
     const q = this.search.value.trim().toLowerCase();
     const rows = this.chars.filter((c) => !q || c.name.toLowerCase().includes(q) || DEPTS[c.dept].toLowerCase().includes(q)).slice(0, 300);
-    this.list.innerHTML = rows.map((c) => `<div class="item${c.id === this.selected ? " sel" : ""}" data-id="${c.id}">${c.name} · ${DEPTS[c.dept]} · ${STATES[this.states.get(c.id) ?? 0]}</div>`).join("");
+    // keyed diff: reuse row elements so nothing is torn down and rebuilt (no flicker, no lost hover)
+    const have = new Map<string, HTMLElement>();
+    for (const el of Array.from(this.list.children) as HTMLElement[]) have.set(el.dataset.id ?? "", el);
+    let prev: Element | null = null;
+    for (const c of rows) {
+      const key = String(c.id);
+      let el = have.get(key);
+      if (el) have.delete(key); else { el = document.createElement("div"); el.className = "item"; el.dataset.id = key; }
+      const text = `${c.name} · ${DEPTS[c.dept]} · ${STATES[this.states.get(c.id) ?? 0]}`;
+      if (el.textContent !== text) el.textContent = text;
+      el.classList.toggle("sel", c.id === this.selected);
+      const want: Element | null = prev ? prev.nextElementSibling : this.list.firstElementChild;
+      if (want !== el) this.list.insertBefore(el, want);
+      prev = el;
+    }
+    for (const el of have.values()) el.remove();
   }
 }
