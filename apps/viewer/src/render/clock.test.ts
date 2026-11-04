@@ -13,6 +13,16 @@ describe("ClockSync", () => {
     // first second: no data newer than tick 0 exists yet, so the clock cannot move (and must not pass the data)
     for (let i = 61; i < frames.length; i++) expect(frames[i]).toBeGreaterThan(frames[i - 1]);
   });
+  it("moves at an even pace: per-frame speed stays within 10% of real time once running", () => {
+    for (const [speed, fps] of [[1, 60], [1, 30], [10, 60]] as const) {
+      const c = new ClockSync(0);
+      const frames = run(c, 40, fps, (t) => Math.floor(t * speed), speed);
+      for (let i = fps * 10; i < frames.length; i++) {
+        const rate = (frames[i] - frames[i - 1]) * fps / speed;
+        expect(rate).toBeGreaterThan(0.9); expect(rate).toBeLessThan(1.1);
+      }
+    }
+  });
   it("never runs ahead of the data and stays close behind it", () => {
     const c = new ClockSync(0);
     const frames = run(c, 30, 60, (t) => Math.floor(t), 1);

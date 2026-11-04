@@ -1,16 +1,19 @@
 /**
- * Smooth render clock: advances every frame at sim speed and gently chases (latest - lead),
- * so periodic delta arrivals never cause stalls or jumps. Never passes the newest data.
+ * Render clock: advances at exactly sim speed every frame, with only a very gentle correction toward
+ * (latest - lead), so the once-per-second arrival of data never causes speed surges. Never passes the
+ * newest data; snaps forward only after a long gap (e.g. a hidden tab).
  */
 export class ClockSync {
   constructor(public t: number) {}
   reset(t: number) { this.t = t; }
   update(dt: number, latest: number, speed: number, paused: boolean): number {
     if (paused) return this.t;
-    const lead = 1 + speed * 0.12;
-    const target = latest - lead;
+    const lead = 1.5 + speed * 0.1;
     if (latest - this.t > lead * 3 + 60) { this.t = Math.max(this.t, latest - lead); return this.t; }
-    const rate = Math.max(0.15 * speed, speed + 3 * (target - this.t));
+    const err = latest - lead - this.t; // >0: we are too far behind
+    // within +-3 ticks: at most +-10% speed; beyond that, catch up (or ease back) faster
+    const adj = Math.max(-0.1, Math.min(0.1, 0.05 * err)) + (Math.abs(err) > 3 ? 0.15 * (err - Math.sign(err) * 3) : 0);
+    const rate = Math.max(0, speed * (1 + Math.max(-0.5, Math.min(2, adj))));
     this.t = Math.min(latest, this.t + rate * dt);
     return this.t;
   }
