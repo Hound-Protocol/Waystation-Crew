@@ -32,3 +32,8 @@ export function solidMask(inp: BakeInput, openDoors?: Set<number>): Uint8Array {
   for (const d of inp.deco ?? []) if (d.sprite === "wall:canopy" && d.x >= 0 && d.y >= 0 && d.x < w && d.y < h) m[d.y * w + d.x] = 0;
   return m;
 }
+
+/** Writes how opaque each door is into the light mask bytes (255 shut, 0 fully open); only the door cells are touched. `open[i]` is door i's eased open amount 0..1. */
+export function applyDoors(bytes: Uint8Array, w: number, doors: ReadonlyArray<{ x: number; y: number }>, open: ArrayLike<number>): void {
+  for (let i = 0; i < doors.length; i++) bytes[doors[i].y * w + doors[i].x] = Math.round((1 - Math.min(1, Math.max(0, open[i]))) * 255);
+}

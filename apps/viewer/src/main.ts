@@ -49,7 +49,8 @@ async function boot() {
     const cv = buildTileCanvas(inp, { lit: false }); lightPass.setStation(inp, cv); return new Sprite(canvasTexture(cv));
   };
   const chars = new CharLayer(), status = new StatusLayer();
-  chars.light = (x, y) => lightPass.levelAt(x, y);
+  // crew aboard the ship stand in its baked-lit deck (in the berth while it is docked or away): no station light applies to them
+  chars.light = (x, y) => (berth && x >= berth.x && x < berth.x + berth.w && y >= berth.y && y < berth.y + berth.h ? 1 : lightPass.levelAt(x, y));
   const texs = characterTextures();
   const doorLayer = new DoorLayer(texs);
   const solar = new SolarLayer();
@@ -98,7 +99,7 @@ async function boot() {
   } });
   transport.onMessage((m: ServerMsg) => {
     if (m.t === "snapshot") {
-      mapLayer.removeChildren();
+      mapLayer.removeChildren().forEach((c) => c.destroy({ texture: true }));
       mapLayer.addChild(stationSprite(m));
       doorLayer.reset(m.tiles, m.w, m.h, (x, y) => doorIsVertical(m.tiles, m.w, m.h, x, y));
       gateLayer.reset(m.tiles, m.w, m.h);
@@ -175,7 +176,7 @@ async function boot() {
     cam.clampRect(mapW / 2 - SYSTEM_EXTENT, mapH / 2 - SYSTEM_EXTENT, SYSTEM_EXTENT * 2, SYSTEM_EXTENT * 2, app.screen.width, app.screen.height);
     for (let i = fades.length - 1; i >= 0; i--) {
       const f = fades[i]; f.alpha = Math.min(1, f.alpha + dt / 1.2);
-      if (f.alpha >= 1) { for (const o of mapLayer.children.slice(0, -1)) if (o !== f) o.destroy(); fades.splice(i, 1); }
+      if (f.alpha >= 1) { for (const o of mapLayer.children.slice(0, -1)) if (o !== f) o.destroy({ texture: true }); fades.splice(i, 1); }
     }
     if (fitted) worldA = Math.min(1, worldA + dt / 0.7);
     world.alpha = worldA * worldA * (3 - 2 * worldA);
@@ -203,6 +204,7 @@ async function boot() {
     marker.alpha = markerA < 0.01 ? 0 : markerA;
     gateLayer.update(time, { gate: pose.stationGate.v, gateMoving: pose.stationGate.moving });
     doorLayer.update(dt, chars.ids, (id) => tracks.positionAt(id, renderTick));
+    lightPass.setDoors(doorLayer.model.doors, doorLayer.model.open);
     chars.update(dt, renderTick, tracks, cam, app.screen.width, app.screen.height);
     status.place = chars.place; status.update(dt, renderTick, tracks, cam, app.screen.width, app.screen.height);
     const d = Math.floor((latestTick + 21600) / 86400) + 1, h = Math.floor(((latestTick / 3600) + 6) % 24), m = Math.floor((latestTick / 60) % 60);
@@ -228,9 +230,9 @@ async function boot() {
     stationOutline.update(dt, hit?.id === "station"); shipOutline.update(dt, hit?.id === "ship"); bodyOutline.update(dt, !!hit && hit.id.startsWith("body:"));
   });
   (window as unknown as { __wc: unknown }).__wc = { lightPass, lightProbe: async (n = 120) => { const sc = cam.scale, W = app.screen.width, H = app.screen.height; let bad = 0, tot = 0; const rows: unknown[] = [];
-    const full = app.renderer.extract.pixels({ target: app.stage, frame: new Rectangle(0, 0, W, H), resolution: 1 }).pixels;   // one full-screen read: the light filter maps pixels relative to the render target, so a 1x1 frame would shift it
+    const full = app.renderer.extract.pixels({ target: app.stage, frame: new Rectangle(0, 0, W, H), resolution: app.renderer.resolution }).pixels; const res = app.renderer.resolution, RW = Math.round(W * res);   // one full-screen read: the light filter maps pixels relative to the render target, so a 1x1 frame would shift it
     for (let i = 0; i < n; i++) { const sx = 20 + ((i * 97) % (W - 40)), sy = 20 + ((i * 53) % (H - 40)); const t = cam.screenToWorld(sx, sy); const e = expectedPixel(lightPass, t.x, t.y, sc); if (!e) continue;
-      const o = (sy * W + sx) * 4, px = [full[o], full[o + 1], full[o + 2]]; tot++; const diff = Math.max(Math.abs(px[0] - e[0]), Math.abs(px[1] - e[1]), Math.abs(px[2] - e[2])); if (diff > 14) { bad++; if (rows.length < 40) rows.push({ sx, sy, tx: t.x, ty: t.y, gpu: px, cpu: e.map(Math.round) }); } }
+      const o = (Math.round(sy * res) * RW + Math.round(sx * res)) * 4, px = [full[o], full[o + 1], full[o + 2]]; tot++; const diff = Math.max(Math.abs(px[0] - e[0]), Math.abs(px[1] - e[1]), Math.abs(px[2] - e[2])); if (diff > 14) { bad++; if (rows.length < 40) rows.push({ sx, sy, tx: t.x, ty: t.y, gpu: px, cpu: e.map(Math.round) }); } }
     return { tot, bad, rows }; }, cam, transport, holdShip: (tick: number | null) => { shipHold = tick; }, shipAt: () => shipAt, focus: (kind: number, nth = 0) => { const id = status.find(kind, nth); if (id === null) return null; const p0 = tracks.positionAt(id, renderTick); if (!p0) return null; const p = chars.place ? chars.place(p0.x, p0.y) : p0; cam.centerOn(p.x + 0.5, p.y + 0.5, app.screen.width, app.screen.height); return id; } };
 }
 boot().catch((e) => showError(`Could not start the renderer: ${e instanceof Error ? e.message : e}`));

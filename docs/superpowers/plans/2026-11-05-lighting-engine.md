@@ -112,3 +112,15 @@
 - GPU vs CPU parity (apps/viewer/e2e/light-parity.py): 0/200 off at 0 and 8 lights, 1/200 at 48 (a sprite overlay).
 - Not measured: frame cost on a real GPU (only software rendering was available here).
 - Tests for `characterLevel`, `lightBudget` were written together with their implementations (no separate RED run); `CHAR_MIN` was mutation-checked.
+
+## Final review (fresh reviewer, whole branch)
+- Final: fixed lighting misplaced on HiDPI screens - e2e parity at device ratio 2 failed before (22/200 and worse), passes after; script now runs at ratio 1 and 2. (The reviewer's claim and fix held up.)
+- Final: fixed open doors never letting light through - `applyDoors` test RED -> GREEN; the shader reads partial opacity so a door part open lets part of the light through.
+- Final: fixed GPU memory leak on every rebuild - masks are now one-byte textures that are destroyed on replacement; station sprites are destroyed with their textures.
+- Final: fixed lights popping at the light cap - `pickLights` fade test RED -> GREEN; shadow steps now ease with zoom instead of switching at 5 px/tile (budget tests RED -> GREEN); light count is constant across zoom.
+- Final: fixed crew aboard the ship lit by the wrong lights (they stand in the berth: no station light applies); fallback sprites keep their department colour; tint no longer over-brightens partly transparent pixels.
+- Final: minor (deferred): a lamp build or growth briefly pops a few pixels under the new lamp before the 1.2 s sprite cross-fade finishes.
+- Final: minor (deferred): GPU shadows point-sample, so rays clipping a wall corner by less than a sample step can differ from the CPU walk (matters for character lighting near door jambs, and more on phones).
+- Final: minor (deferred): per-frame allocations in `LightPass.update`, `pickLights` and `sampleLight` (GC churn on phones).
+- Final: Ruling: `CHAR_MIN` (0.38) never takes effect because the ambient floor is 0.5; characters in shadow therefore stay at about half brightness, which is readable. Cost if wrong: none visible; the constant can go when ambient is lowered.
+- Final: Ruling: the reviewer's note that light ids change with map width does not apply: the map is a fixed 220x220, so growth keeps ids and only new lights fade in. (The ruling above about re-id on growth is withdrawn.)

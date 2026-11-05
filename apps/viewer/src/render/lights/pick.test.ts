@@ -22,4 +22,15 @@ describe("pickLights", () => {
     expect(a).toEqual(copy);
   });
   it("returns nothing for a zero cap", () => { expect(pickLights([L(1, 10, 5)], view, 0)).toEqual([]); });
+  it("fades the lights nearest the cap so panning never snaps one on or off", () => {
+    const all = Array.from({ length: 30 }, (_, i) => L(i, i * 0.6, 5));
+    const got = pickLights(all, view, 5), byDist = got.slice().sort((a, b) => Math.abs(a.x - 10) - Math.abs(b.x - 10));
+    expect(byDist[0].i).toBe(1);                                  // the nearest light is untouched
+    expect(byDist[byDist.length - 1].i).toBeLessThan(0.6);        // the last one admitted is already dim
+    const cut = pickLights(all, view, 5).length, more = pickLights(all, view, 6);
+    expect(more.length).toBe(cut + 1);
+  });
+  it("leaves every light at full strength when they all fit", () => {
+    for (const l of pickLights([L(1, 9, 5), L(2, 11, 5)], view, 5)) expect(l.i).toBe(1);
+  });
 });

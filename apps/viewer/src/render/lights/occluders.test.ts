@@ -45,3 +45,14 @@ describe("solidMask", () => {
     expect(Array.from(m)).toEqual([0, 0, 0, 1]);
   });
 });
+
+import { applyDoors } from "./occluders";
+describe("applyDoors", () => {
+  it("makes door cells as opaque as they are shut and leaves every other cell alone", () => {
+    const bytes = new Uint8Array([255, 255, 0, 255]);                 // 4x1: wall, door, floor, door
+    applyDoors(bytes, 4, [{ x: 1, y: 0 }, { x: 3, y: 0 }], [0, 1]);
+    expect(Array.from(bytes)).toEqual([255, 255, 0, 0]);
+    applyDoors(bytes, 4, [{ x: 1, y: 0 }], [0.5]);
+    expect(bytes[1]).toBe(128); expect(bytes[0]).toBe(255); expect(bytes[2]).toBe(0);
+  });
+});

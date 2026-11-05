@@ -11,8 +11,14 @@ describe("lightBudget", () => {
   it("gives phones fewer lights and shorter shadow rays", () => {
     expect(lightBudget({ mobile: true, scale: 48 })).toEqual({ maxLights: 16, steps: 8, shadows: true });
   });
-  it("drops shadows and most lights when zoomed far out, on any device", () => {
-    for (const mobile of [false, true]) expect(lightBudget({ mobile, scale: 4.9 })).toEqual({ maxLights: 8, steps: 1, shadows: false });
-    expect(lightBudget({ mobile: false, scale: 5 }).shadows).toBe(true);
+  it("eases shadow quality away as you zoom out instead of switching it off at one scale", () => {
+    const steps = (scale: number) => lightBudget({ mobile: false, scale }).steps;
+    expect(steps(4.9)).toBe(1); expect(lightBudget({ mobile: false, scale: 4.9 }).shadows).toBe(false);
+    expect(steps(8)).toBe(24); expect(steps(40)).toBe(24);
+    let prev = steps(4.9); for (let s = 4.9; s <= 8; s += 0.05) { const v = steps(s); expect(v).toBeGreaterThanOrEqual(prev); expect(v - prev).toBeLessThanOrEqual(2); prev = v; }
+    expect(lightBudget({ mobile: true, scale: 8 }).steps).toBe(8);
+  });
+  it("keeps the light count constant across zoom (a count switch would pop)", () => {
+    expect(lightBudget({ mobile: false, scale: 4 }).maxLights).toBe(48); expect(lightBudget({ mobile: true, scale: 4 }).maxLights).toBe(16);
   });
 });

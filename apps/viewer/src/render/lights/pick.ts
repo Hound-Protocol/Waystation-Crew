@@ -13,5 +13,8 @@ export function pickLights(all: readonly LightSource[], view: TileView, cap: num
     out.push({ l, d: Math.hypot(l.x - cx, l.y - cy) });
   }
   out.sort((a, b) => a.d - b.d || a.l.id - b.l.id);
-  return out.slice(0, cap).map((o) => o.l);
+  if (out.length <= cap) return out.map((o) => o.l);
+  // more lights than the budget: the ones nearest the cutoff distance dim smoothly to nothing, so panning or zooming never snaps a light on or off
+  const cut = out[cap].d, band = Math.max(cut * 0.3, 1);
+  return out.slice(0, cap).map((o) => { const w = Math.min(1, (cut - o.d) / band), k = w * w * (3 - 2 * w); return k >= 1 ? o.l : { ...o.l, i: o.l.i * k }; });
 }

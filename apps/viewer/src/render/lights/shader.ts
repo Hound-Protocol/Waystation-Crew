@@ -37,12 +37,14 @@ const float AMBIENT = ${AMBIENT.toFixed(2)};
 const float SPOT_INNER = ${SPOT_INNER.toFixed(2)};
 const float TINT = ${TINT.toFixed(2)};
 
-bool solidAt(vec2 c) {
-  if (c.x < 0.0 || c.y < 0.0 || c.x >= uMap.x || c.y >= uMap.y) return false;
-  return texture(uMask, (c + 0.5) / uMap.xy).r > 0.5;
+// how much of the light a tile stops: 1 for walls, 0 for floor, in between for a door that is part open
+float opacityAt(vec2 c) {
+  if (c.x < 0.0 || c.y < 0.0 || c.x >= uMap.x || c.y >= uMap.y) return 0.0;
+  return texture(uMask, (c + 0.5) / uMap.xy).r;
 }
-// 1.0 if the segment from p to lp crosses no solid tile (the end cells are skipped, as in the CPU model)
+// share of light that gets from lp to p (the end cells are skipped, as in the CPU model)
 float lit(vec2 p, vec2 lp) {
+  float through = 1.0;
   vec2 d = lp - p; float len = length(d);
   vec2 cs = floor(p), ce = floor(lp);
   int n = int(min(max(len * 2.0, 1.0), uMap.w));
@@ -50,9 +52,10 @@ float lit(vec2 p, vec2 lp) {
     if (s >= n) break;
     vec2 c = floor(p + d * (float(s) / float(n)));
     if (c == cs || c == ce) continue;
-    if (solidAt(c)) return 0.0;
+    through *= 1.0 - opacityAt(c);
+    if (through < 0.02) return 0.0;
   }
-  return 1.0;
+  return through;
 }
 float quant(float v, float soft) {
   if (v <= LEVELS[0]) return LEVELS[0];
@@ -87,7 +90,7 @@ void main(void) {
     f *= lit(p, l.xy);
     L += f; tint += uColors[j].rgb * f;
   }
-  float emissive = texture(uEmis, p / uMap.xy).a;
-  vec3 col = emissive > 0.5 ? base.rgb : min(base.rgb * quant(L, uView.w) + tint * TINT, 1.0);
+  float emissive = texture(uEmis, p / uMap.xy).r;
+  vec3 col = emissive > 0.5 ? base.rgb : min(base.rgb * quant(L, uView.w) + tint * TINT * base.a, 1.0);
   finalColor = vec4(col, base.a);
 }`;

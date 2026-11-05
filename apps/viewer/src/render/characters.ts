@@ -92,7 +92,7 @@ export class CharLayer {
           L.x += ((vertical ? off : 0) - L.x) * e; L.y += ((vertical ? 0 : off) - L.y) * e; lx = L.x; ly = L.y;
         }
         const px = (p.x + 0.5 + sway + lx) * TILE, py = (p.y + 0.5 + ly) * TILE;
-        if (s === "sprite" && raw) {                                  // lit by the room's light, eased so crossing a band edge never snaps
+        if (spr && raw) {                                             // lit by the room's light, eased so crossing a band edge never snaps
           const goal = this.light ? this.light(raw.x + 0.5, raw.y + 0.5) : 1;
           this.shade[i] += (goal - this.shade[i]) * (1 - Math.exp(-dt * 8));
           const g = Math.round(this.shade[i] * 255); v.body.tint = (g << 16) | (g << 8) | g;

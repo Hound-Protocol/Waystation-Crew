@@ -42,7 +42,7 @@ export class DoorModel {
 /** Pixi sprites for each door tile, driven by a DoorModel. */
 export class DoorLayer {
   readonly root = new Container();
-  private model = new DoorModel([]);
+  model = new DoorModel([]);
   private sprites: Sprite[] = [];
   private frames: number[] = [];
   private prev = new Map<number, { x: number; y: number }>();
