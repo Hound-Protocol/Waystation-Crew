@@ -12,11 +12,11 @@ const MIX: Array<[Department, number]> = [
 ];
 
 function dockingSpot(world: World): { x: number; y: number } {
-  const room = world.station.rooms.find((r) => r.name === "Docking");
+  const room = world.station.rooms.find((r) => r.name === "Arrivals");
   const rng = world.rng.fork("spawn" + world.chars.count);
   if (!room) return { x: 1, y: 1 };
   for (let i = 0; i < 40; i++) {
-    const x = rng.int(room.x + 1, room.x + room.w - 2), y = rng.int(room.y + 4, room.y + room.h - 2);
+    const x = rng.int(room.x + 1, room.x + room.w - 2), y = rng.int(room.y + 1, room.y + room.h - 2);
     if (world.station.map.get(x, y) === TileKind.Floor) return { x, y };
   }
   return { x: room.x + 1, y: room.y + room.h - 2 };

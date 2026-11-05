@@ -11,7 +11,7 @@ export interface JobPost { id: number; dept: Department; minRank: Rank; workstat
 
 const ROOM_DEPT: Record<string, Department> = {
   Bridge: Department.Command, Engineering: Department.Engineering, Medbay: Department.Medical,
-  Security: Department.Security, Cargo: Department.Supply, Docking: Department.Supply, Galley: Department.Service,
+  Security: Department.Security, Cargo: Department.Supply, Arrivals: Department.Supply, Galley: Department.Service,
 };
 
 /** Sim starts at 06:00 station time. Day 06-14, swing 14-22, night 22-06. */

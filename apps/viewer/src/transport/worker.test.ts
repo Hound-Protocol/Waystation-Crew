@@ -24,7 +24,7 @@ describe("worker transport", () => {
     t.send({ t: "subscribe", viewport: { x: 0, y: 0, w: 60, h: 40, zoom: 3 } });
     await Promise.resolve();
     expect(got[0].t).toBe("snapshot");
-    if (got[0].t === "snapshot") { expect(got[0].chars.length).toBe(20); expect(got[0].w).toBe(60); }
+    if (got[0].t === "snapshot") { expect(got[0].chars.length).toBe(20); expect(got[0].w).toBe(64); }
   });
   it("advancing real time yields deltas", async () => {
     const { t, got, host } = collect();

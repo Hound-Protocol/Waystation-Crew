@@ -8,9 +8,9 @@ import { ClockSync } from "./clock";
 function walkTrace(path: "straight" | "corner") {
   const host = new SimHost({ seed: 1, population: 3, budgetMs: Infinity });
   const w = host.world, id = 0;
-  w.chars.x[id] = 2; w.chars.y[id] = 18;
-  const goal = path === "straight" ? { x: 56, y: 18 } : { x: 40, y: 19 };
-  const route = findPath(w.station.map, { x: 2, y: 18 }, goal)!;
+  w.chars.x[id] = 2; w.chars.y[id] = 16;
+  const goal = path === "straight" ? { x: 56, y: 16 } : { x: 40, y: 17 };
+  const route = findPath(w.station.map, { x: 2, y: 16 }, goal)!;
   w.actions[id] = { kind: ActionKind.Wander, furnitureId: -1, path: route.slice(), ticksLeft: 0 };
   const snap = host.snapshot() as any;
   const tracks = new Tracks(); tracks.reset(snap.chars);

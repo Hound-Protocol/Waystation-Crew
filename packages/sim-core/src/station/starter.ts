@@ -1,6 +1,8 @@
 import { TileKind, createTilemap, isWalkable, type Point, type Tilemap } from "./tilemap";
+import { createRng } from "../rng";
+import { MODULE_W, pickPreset, stampModule, type ModuleKind } from "./modules";
 
-export interface Room { id: number; name: string; x: number; y: number; w: number; h: number }
+export interface Room { id: number; name: string; x: number; y: number; w: number; h: number; kind?: string; variant?: number }
 export interface Furniture { id: number; kind: TileKind; x: number; y: number; roomId: number }
 export interface Station { map: Tilemap; rooms: Room[]; furniture: Furniture[] }
 
@@ -14,60 +16,38 @@ export function interactionPoint(map: Tilemap, f: Furniture): Point | null {
   return null;
 }
 
-export function buildStarterStation(): Station {
-  const map = createTilemap(60, 40);
+/**
+ * The starter station is composed from module presets on a 4x4 slot grid. Rows A (door south) and B (door north, flipped) open onto the north corridor,
+ * rows C (door south) and D (door north, flipped) onto the south corridor, and a west corridor links both. Empty slots are reserved for modules
+ * the crew builds later.
+ */
+export const STATION_SIZE = 64;
+const PITCH_X = MODULE_W - 1;                              // neighbouring modules share their wall column
+const SLOT_X = (c: number) => 3 + c * PITCH_X;
+const SLOT_Y = [2, 18, 31, 47];                            // A, B, C, D (B and C share a wall row)
+export const STARTER_LAYOUT: Array<Array<ModuleKind | null>> = [
+  ["command", "medical", "security", "arrivals"],
+  ["engineering", "supply", "galley", "habitation"],
+  ["habitation", "habitation", "habitation", "habitation"],
+  [null, null, null, null],
+];
+
+export function buildStarterStation(seed = 1): Station {
+  const map = createTilemap(STATION_SIZE, STATION_SIZE);
   const rooms: Room[] = [];
   const furniture: Furniture[] = [];
-  const room = (name: string, x: number, y: number, w: number, h: number): Room => {
-    const r = { id: rooms.length, name, x, y, w, h };
-    rooms.push(r);
-    for (let yy = y; yy < y + h; yy++)
-      for (let xx = x; xx < x + w; xx++) {
-        const edge = xx === x || yy === y || xx === x + w - 1 || yy === y + h - 1;
-        map.set(xx, yy, edge ? TileKind.Wall : TileKind.Floor);
-      }
-    return r;
-  };
-  const put = (r: Room, kind: TileKind, x: number, y: number) => {
-    map.set(x, y, kind);
-    furniture.push({ id: furniture.length, kind, x, y, roomId: r.id });
-  };
-  // spine corridor rows 18-19
-  for (let x = 1; x < 59; x++) for (const y of [18, 19]) map.set(x, y, TileKind.Floor);
-  // top row rooms (walls rows 2..17, door toward corridor at bottom wall y=17)
-  const top = (name: string, x: number, w: number) => {
-    const r = room(name, x, 2, w, 16);
-    map.set(x + (w >> 1), 17, TileKind.Door);
-    return r;
-  };
-  const bottom = (name: string, x: number, w: number, h: number) => {
-    const r = room(name, x, 20, w, h);
-    map.set(x + (w >> 1), 20, TileKind.Door);
-    return r;
-  };
-  const bridge = top("Bridge", 1, 12);
-  for (let i = 0; i < 4; i++) put(bridge, TileKind.Console, 3 + i * 2, 4);
-  const eng = top("Engineering", 13, 14);
-  for (let i = 0; i < 4; i++) put(eng, TileKind.Console, 15 + i * 3, 4);
-  const med = top("Medbay", 27, 12);
-  for (let i = 0; i < 4; i++) put(med, TileKind.Bed, 29 + i * 2, 4);
-  put(med, TileKind.Console, 29, 10);
-  const sec = top("Security", 39, 10);
-  for (let i = 0; i < 3; i++) put(sec, TileKind.Console, 41 + i * 2, 4);
-  const dock = top("Docking", 49, 10);
-  put(dock, TileKind.Console, 51, 4);
-  for (let x = 50; x < 58; x++) map.set(x, 2, TileKind.Airlock);
-  // bottom row
-  const cargo = bottom("Cargo", 1, 12, 19);
-  for (let i = 0; i < 3; i++) put(cargo, TileKind.Console, 3 + i * 3, 22);
-  const galley = bottom("Galley", 13, 14, 19);
-  for (let i = 0; i < 3; i++) for (let j = 0; j < 2; j++) put(galley, TileKind.Table, 15 + i * 4, 23 + j * 4);
-  put(galley, TileKind.Console, 15, 21);
-  put(galley, TileKind.Console, 17, 21);
-  put(galley, TileKind.Plant, 15, 36);
-  const hab = bottom("Habitation", 27, 32, 19);
-  for (let row = 0; row < 8; row++)
-    for (let c = 0; c < 15; c++) put(hab, TileKind.Bed, 28 + c * 2, 22 + row * 2);
-  put(hab, TileKind.Plant, 29, 21);
+  const rng = createRng(seed);
+  const used = new Map<ModuleKind, Set<number>>();
+  // corridors: north (rows 16-17), south (rows 45-46) and the west link (cols 1-2)
+  for (const y0 of [16, 45]) for (let y = y0; y < y0 + 2; y++) for (let x = 1; x <= SLOT_X(3) + MODULE_W - 1; x++) map.set(x, y, TileKind.Floor);
+  for (let y = 16; y <= 46; y++) for (const x of [1, 2]) map.set(x, y, TileKind.Floor);
+  STARTER_LAYOUT.forEach((row, r) =>
+    row.forEach((kind, c) => {
+      if (!kind) return;
+      const seen = used.get(kind) ?? new Set<number>(); used.set(kind, seen);
+      const preset = pickPreset(kind, rng, seen); seen.add(preset.variant);
+      stampModule({ map, rooms, furniture }, preset, SLOT_X(c), SLOT_Y[r], r === 1 || r === 3);
+    }));
+  furniture.forEach((f, i) => { f.id = i; });
   return { map, rooms, furniture };
 }

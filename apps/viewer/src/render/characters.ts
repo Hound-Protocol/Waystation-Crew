@@ -71,13 +71,13 @@ export class CharLayer {
         v.body.alpha = v.head.alpha = this.fade[i];
         v.body.visible = vis; if (s === "silhouette" || (s === "sprite" && !spr)) v.head.visible = vis;
         if (!vis || !p) continue;
-        // gentle left-right sway while walking, eased in and out (one full sway every two tiles)
+        // gentle left-right sway while walking, eased in and out (one full sway per tile, matching the stride)
         if (s === "sprite") {
           const lp = this.last[i]; const sp = lp && dt > 0 ? Math.hypot(p.x - lp.x, p.y - lp.y) / dt : 0;
           this.last[i] = { x: p.x, y: p.y };
           this.bob[i] += ((sp > 0.3 ? 1 : 0) - this.bob[i]) * (1 - Math.exp(-dt * 10));
         }
-        const sway = s === "sprite" ? Math.sin(renderTick * WALK_SPEED * Math.PI) * this.bob[i] : 0;
+        const sway = s === "sprite" ? Math.sin(renderTick * WALK_SPEED * Math.PI * 2) * this.bob[i] : 0;
         const px = (p.x + 0.5 + sway * 0.05) * TILE, py = (p.y + 0.5) * TILE;
         if (s === "sprite") v.body.rotation = sway * 0.07;
         if (s === "dot") { v.body.position.set(px, py); }

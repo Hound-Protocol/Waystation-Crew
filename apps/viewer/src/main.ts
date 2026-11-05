@@ -61,7 +61,7 @@ async function boot() {
       renderTick = latestTick = m.tick; clock.reset(m.tick, speed);
       if (!fitted) {
         cam.fit(mapW, mapH, app.screen.width, app.screen.height);
-        if (cam.scale < 10) { cam.zoomAt(app.screen.width / 2, app.screen.height / 2, 10 / cam.scale); cam.centerOn(53, 12, app.screen.width, app.screen.height); }
+        if (cam.scale < 10) { cam.zoomAt(app.screen.width / 2, app.screen.height / 2, 10 / cam.scale); cam.centerOn(52, 9, app.screen.width, app.screen.height); }
         fitted = true;
       }
     } else if (m.t === "delta") {

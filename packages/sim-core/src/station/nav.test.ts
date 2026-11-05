@@ -66,25 +66,38 @@ describe("findPath quality", () => {
 
 describe("starter station", () => {
   const st = buildStarterStation();
-  it("has at least 100 beds in Habitation", () => {
-    const hab = st.rooms.find((r) => r.name === "Habitation")!;
-    expect(st.furniture.filter((f) => f.kind === TileKind.Bed && f.roomId === hab.id).length).toBeGreaterThanOrEqual(100);
+  const dockRoom = st.rooms.find((r) => r.name === "Arrivals")!;
+  /** A floor tile just inside the module's door. */
+  const inside = (r: { x: number; y: number; h: number; w: number; id: number }) => {
+    for (const y of [r.y + 1, r.y + r.h - 2]) { const x = r.x + (r.w >> 1); if (st.map.get(x, y) === TileKind.Floor) return { x, y }; }
+    throw new Error("no inside tile");
+  };
+  const start = inside(dockRoom);
+  it("has at least 100 beds across the Habitation modules", () => {
+    const habs = new Set(st.rooms.filter((r) => r.name === "Habitation").map((r) => r.id));
+    expect(st.furniture.filter((f) => f.kind === TileKind.Bed && habs.has(f.roomId)).length).toBeGreaterThanOrEqual(100);
   });
-  it("has all required rooms reachable from Docking", () => {
-    const dock = st.rooms.find((r) => r.name === "Docking")!;
-    const start = { x: dock.x + 1, y: dock.y + 1 };
+  it("starts with an Arrivals module that has airlocks", () => {
+    expect(dockRoom).toBeTruthy();
+    expect(st.map.get(dockRoom.x + 7, dockRoom.y)).toBe(TileKind.Airlock);
+  });
+  it("uses every habitation preset once (unique modules)", () => {
+    const v = st.rooms.filter((r) => r.name === "Habitation").map((r) => r.variant);
+    expect(new Set(v).size).toBe(v.length);
+  });
+  it("has all required rooms reachable from Arrivals", () => {
     for (const name of ["Bridge", "Engineering", "Medbay", "Security", "Cargo", "Galley", "Habitation"]) {
-      const r = st.rooms.find((q) => q.name === name)!;
-      expect(r, name).toBeTruthy();
-      expect(findPath(st.map, start, { x: r.x + 1, y: r.y + 1 }), name).not.toBeNull();
+      for (const r of st.rooms.filter((q) => q.name === name)) {
+        expect(r, name).toBeTruthy();
+        expect(findPath(st.map, start, inside(r)), `${name}@${r.x},${r.y}`).not.toBeNull();
+      }
     }
   });
-  it("every non-bed furniture has a reachable interaction point", () => {
-    const dock = st.rooms.find((r) => r.name === "Docking")!;
+  it("every furniture has a reachable interaction point", () => {
     for (const f of st.furniture) {
       const ip = interactionPoint(st.map, f)!;
       expect(ip, `${f.kind}@${f.x},${f.y}`).not.toBeNull();
-      expect(findPath(st.map, { x: dock.x + 1, y: dock.y + 1 }, ip)).not.toBeNull();
+      expect(findPath(st.map, start, ip), `${f.kind}@${f.x},${f.y}`).not.toBeNull();
     }
   });
 });
