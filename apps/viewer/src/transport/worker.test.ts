@@ -132,4 +132,12 @@ describe("tasks reach the viewer", () => {
     }
     expect(changes).toBeGreaterThan(0); expect(working).toBe(true);
   });
+  it("sends station stats with the snapshot and refreshes them on deltas about every 30 ticks", async () => {
+    const host = new SimHost({ seed: 1, population: 20, budgetMs: Infinity });
+    const snap = host.snapshot() as Extract<ServerMsg, { t: "snapshot" }>;
+    expect(snap.stats?.rooms).toBeGreaterThan(0); expect(snap.stats?.needs.hunger).toBeGreaterThan(0);
+    let withStats = 0, total = 0;
+    for (let i = 0; i < 100; i++) { const d = host.advanceReal(1); if (d) { total++; if (d.stats) withStats++; } }
+    expect(total).toBeGreaterThan(0); expect(withStats).toBeGreaterThanOrEqual(3); expect(withStats).toBeLessThan(total);   // about every 30 ticks, not every delta
+  });
 });

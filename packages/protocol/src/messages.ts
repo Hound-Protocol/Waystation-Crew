@@ -1,10 +1,10 @@
-import type { ShipChunkSnap, ShipStatus, Profile, CharSnap, Clock, DecoSnap, DevCmd, FurnitureSnap, Move, RoomSnap, StateChange, TaskChange, Viewport } from "./types";
+import type { ShipChunkSnap, ShipStatus, StatsSnap, Profile, CharSnap, Clock, DecoSnap, DevCmd, FurnitureSnap, Move, RoomSnap, StateChange, TaskChange, Viewport } from "./types";
 
 export type ClientMsg = { t: "subscribe"; viewport: Viewport } | { t: "devCmd"; cmd: DevCmd } | { t: "inspect"; id: number | null };
 export type ServerMsg =
-  | { t: "snapshot"; tick: number; w: number; h: number; tiles: number[]; furniture: FurnitureSnap[]; rooms: RoomSnap[]; chars: CharSnap[]; deco?: DecoSnap[]; floors?: number[]; ship?: ShipChunkSnap; shipStatus?: ShipStatus }
+  | { t: "snapshot"; tick: number; w: number; h: number; tiles: number[]; furniture: FurnitureSnap[]; rooms: RoomSnap[]; chars: CharSnap[]; deco?: DecoSnap[]; floors?: number[]; ship?: ShipChunkSnap; shipStatus?: ShipStatus; stats?: StatsSnap }
   | { t: "station"; tick: number; w: number; h: number; tiles: number[]; furniture: FurnitureSnap[]; rooms: RoomSnap[]; deco?: DecoSnap[]; floors?: number[] }
-  | { t: "delta"; tick: number; moves: Move[]; states: StateChange[]; clock: Clock; shipStatus?: ShipStatus; tasks?: TaskChange[] }
+  | { t: "delta"; tick: number; moves: Move[]; states: StateChange[]; clock: Clock; shipStatus?: ShipStatus; tasks?: TaskChange[]; stats?: StatsSnap }
   | { t: "inspect"; id: number; tick: number; lines: string[]; profile?: Profile | null };
 
 export interface SimTransport {

@@ -1,5 +1,5 @@
-import { taskOf, profileOf, createWorld, step, seedPopulation, arrive, explain, Department, type World } from "@wc/sim-core";
-import type { ClientMsg, ServerMsg, Move, StateChange, TaskChange } from "@wc/protocol";
+import { taskOf, profileOf, stationStats, createWorld, step, seedPopulation, arrive, explain, Department, type World } from "@wc/sim-core";
+import type { ClientMsg, ServerMsg, Move, StateChange, TaskChange, StatsSnap } from "@wc/protocol";
 
 export const MAX_CATCHUP_TICKS = 600;
 export const MAX_SPEED = 600;
@@ -42,6 +42,9 @@ export class SimHost {
     for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) { tiles[y * m.w + x] = 0; if (floors.length) floors[y * m.w + x] = 0; }
     return { tiles, floors, furniture: st.furniture.filter((f) => !inside(f)), rooms: st.rooms.filter((r) => r.name !== "Cargo Ship"), deco: (st.deco ?? []).filter((d) => !inside(d)) };
   }
+  private statsAt = -Infinity;
+  /** station stats ride on a delta about every 30 sim ticks, not on every one */
+  private statsIfDue(): { stats?: StatsSnap } { if (this.world.tick - this.statsAt < 30) return {}; this.statsAt = this.world.tick; return { stats: stationStats(this.world) }; }
   private shipStatus() { return { slip: this.world.ship.slip, holding: this.world.ship.holding, aboard: this.world.ship.crew.length }; }
 
   snapshot(): ServerMsg {
@@ -52,7 +55,7 @@ export class SimHost {
     const sh = w.station.ship;
     const ship = sh ? { w: sh.map.w, h: sh.map.h, tiles: Array.from(sh.map.tiles), furniture: sh.furniture, rooms: sh.rooms, deco: sh.deco ?? [], floors: sh.floors ? Array.from(sh.floors) : [], berth: sh.berth } : undefined;
     const v = this.stationView();
-    return { t: "snapshot", tick: w.tick, w: m.w, h: m.h, tiles: v.tiles, furniture: v.furniture, rooms: v.rooms, chars, deco: v.deco, floors: v.floors, ship, shipStatus: this.shipStatus() };
+    return { t: "snapshot", tick: w.tick, w: m.w, h: m.h, tiles: v.tiles, furniture: v.furniture, rooms: v.rooms, chars, deco: v.deco, floors: v.floors, ship, shipStatus: this.shipStatus(), stats: stationStats(w) };
   }
 
   /** Present only once per station growth: lets the viewer rebake and fade the new rooms in. */
@@ -112,6 +115,6 @@ export class SimHost {
     for (let id = 0; id < before.length; id++) if (before[id] !== c.state[id]) states.push({ id, state: c.state[id] });
     const tasks: TaskChange[] = [];
     for (let id = 0; id < beforeTask.length; id++) { const t = taskOf(w, id); if (beforeTask[id] !== key(t)) tasks.push({ id, task: t }); }
-    return { t: "delta", tick: w.tick, moves, states, clock: { speed: this.speed, paused: this.paused }, shipStatus: this.shipStatus(), tasks };
+    return { t: "delta", tick: w.tick, moves, states, clock: { speed: this.speed, paused: this.paused }, shipStatus: this.shipStatus(), tasks, ...this.statsIfDue() };
   }
 }
