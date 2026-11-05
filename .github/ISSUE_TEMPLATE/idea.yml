@@ -1,0 +1,11 @@
+name: Idea
+description: Propose a feature (we write the concept down first)
+labels: [idea]
+body:
+  - type: textarea
+    id: concept
+    attributes: { label: Concept, description: What is it and why does it make the station feel more alive? }
+    validations: { required: true }
+  - type: textarea
+    id: questions
+    attributes: { label: Open questions }
