@@ -12,6 +12,7 @@ import { Tracks } from "./render/interp";
 import { CharLayer } from "./render/characters";
 import { buildTileCanvas, canvasTexture, characterTextures, TILE } from "./render/tiles";
 import { LightPass, expectedPixel } from "./render/lights/pass";
+import { lightBudget } from "./render/lights/budget";
 import { Pda } from "./ui/pda";
 import { DevPanel } from "./ui/devpanel";
 import { zoomLevel } from "./render/lod";
@@ -40,6 +41,7 @@ async function boot() {
 
   const world = new Container();
   const mapLayer = new Container();
+  const coarsePointer = window.matchMedia?.("(pointer: coarse)").matches ?? false;   // phones and tablets get the reduced light budget
   const lightPass = new LightPass(); mapLayer.filters = [lightPass.filter];
   /** the station canvas, left unlit: the light pass lights it on the GPU */
   const stationSprite = (m: { w: number; h: number; tiles: number[]; rooms: any; furniture?: any; deco?: any; floors?: number[] }) => {
@@ -47,6 +49,7 @@ async function boot() {
     const cv = buildTileCanvas(inp, { lit: false }); lightPass.setStation(inp, cv); return new Sprite(canvasTexture(cv));
   };
   const chars = new CharLayer(), status = new StatusLayer();
+  chars.light = (x, y) => lightPass.levelAt(x, y);
   const texs = characterTextures();
   const doorLayer = new DoorLayer(texs);
   const solar = new SolarLayer();
@@ -177,6 +180,7 @@ async function boot() {
     if (fitted) worldA = Math.min(1, worldA + dt / 0.7);
     world.alpha = worldA * worldA * (3 - 2 * worldA);
     world.scale.set(cam.scale / TILE); world.position.set(cam.tx, cam.ty);
+    lightPass.budget = lightBudget({ mobile: coarsePointer, scale: cam.scale });
     lightPass.update(dt, cam.tx, cam.ty, cam.scale, app.screen.width, app.screen.height, app.renderer.resolution);
     solar.update(dt, renderTick, cam.scale);
     const time = performance.now() / 1000, pose = shipPose(shipHold ?? renderTick - shipSlip);

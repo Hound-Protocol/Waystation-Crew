@@ -97,3 +97,8 @@ export function sampleLight(mask: Uint8Array, w: number, lights: readonly LightS
   for (const l of lights) { const f = castLight(mask, w, l, px, py); if (f <= 0) continue; L += f; tint[0] += l.c[0] * f; tint[1] += l.c[1] * f; tint[2] += l.c[2] * f; }
   return { L, tint };
 }
+
+/** Minimum brightness of a lit character: dark rooms dim people, they never hide them. */
+export const CHAR_MIN = 0.38;
+/** Brightness multiplier for a character standing in light `L` (softly quantized so crossing a band edge is not a snap). */
+export const characterLevel = (L: number): number => Math.max(CHAR_MIN, quantize(L, 1));

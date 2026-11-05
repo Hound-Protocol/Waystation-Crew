@@ -3,7 +3,7 @@ import type { BakeInput, TileCanvas } from "../tiles";
 import { TILE } from "../tiles";
 import { deriveLights } from "./sources";
 import { solidMask } from "./occluders";
-import { softness, sampleLight, quantize, TINT_K } from "./model";
+import { softness, sampleLight, quantize, TINT_K, characterLevel } from "./model";
 import { pickLights } from "./pick";
 import { LightFade } from "./fade";
 import { FRAGMENT, VERTEX, MAX_LIGHTS, MAX_STEPS } from "./shader";
@@ -24,7 +24,11 @@ export class LightPass {
   private readonly lights = new Float32Array(MAX_LIGHTS * 4);
   private readonly colors = new Float32Array(MAX_LIGHTS * 4);
   private readonly aim = new Float32Array(MAX_LIGHTS * 4);
+  /** Brightness (0.38..1) for a character standing at a tile-space point, from the lights currently on screen. */
+  levelAt(x: number, y: number): number { return characterLevel(sampleLight(this.maskData, this.mapW, this.active, x, y).L); }
   get mapSize() { return { w: this.mapW, h: this.mapH }; }
+  /** debug/test: lower the light count further than the budget allows */
+  cap = Infinity;
   budget: LightBudget = { maxLights: MAX_LIGHTS, steps: MAX_STEPS, shadows: true };
   /** lights sent to the GPU on the last update (debug and tests) */
   active: LightSource[] = [];
@@ -58,7 +62,7 @@ export class LightPass {
     this.fade.step(dt);
     const view = { x0: -tx / scale, y0: -ty / scale, x1: (viewW - tx) / scale, y1: (viewH - ty) / scale };
     const live = this.fade.entries().filter((e) => e.f > 0).map((e) => (e.f === 1 ? e.light : { ...e.light, i: e.light.i * e.f }));   // fading lights carry their fade in their intensity
-    this.active = pickLights(live, view, this.budget.maxLights);
+    this.active = pickLights(live, view, Math.min(this.budget.maxLights, this.cap));
     let n = 0;
     for (const l of this.active) {
       this.lights.set([l.x, l.y, l.r, l.i], n * 4); this.colors.set([l.c[0] / 255, l.c[1] / 255, l.c[2] / 255, l.kind === "spot" ? 1 : 0], n * 4); this.aim.set([l.dir ?? 0, l.cone ?? Math.PI, 1, 0], n * 4); n++;

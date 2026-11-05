@@ -36,7 +36,7 @@ LightSource { id; kind: "point" | "spot" | "area" | "sun"; x, y (world tiles); r
 - Events (generator damage, schedule dim at night) change supply or force levels; everything is deterministic and part of the world hash.
 
 ## Slices
-1. **Engine:** light sources and kinds table, GPU lights with full shadows, quantized soft look, lit characters, reduced mode; replaces the baked lighting. Visual checks at several zoom levels and device budgets.
+1. **Engine (built; ship interior stays baked until slice 3):** light sources and kinds table, GPU lights with full shadows, quantized soft look, lit characters, reduced mode; replaces the baked lighting. Visual checks at several zoom levels and device budgets.
 2. **Light state and circuits:** sim circuits and power levels, protocol field, viewer follows, dev controls to cut a room and a generator.
 3. **Ship and star light:** ship's own lights, window starlight by orbit and time of day, planet night side, ship lighting the pad and berth.
 4. **Power effects and events:** work stops, doors and gates fail, characters react; one-off flashes and effects.

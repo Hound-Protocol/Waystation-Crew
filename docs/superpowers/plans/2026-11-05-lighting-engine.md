@@ -102,3 +102,13 @@
 - [ ] **Step 1:** Grep for remaining users of `bakeLighting`/old `Light`; none may remain.
 - [ ] **Step 2:** Full `pnpm test`, `pnpm typecheck`, screenshots of the whole station at Z1 through Z4 compared against the pre-change look (no pop-ins, no dark rooms).
 - [ ] **Step 3:** Update the spec's slice list (slice 1 as built) and commit `refactor(viewer): drop baked lighting`; deploy.
+
+---
+
+## As built (ledger)
+- Ruling: the ship interior keeps its baked lighting (`bakeLighting` stays, used only by the ship canvas) until slice 3 (ship and star light): the ship moves and rotates, so lighting it on the GPU needs its own pass. Cost if wrong: ship interior looks as it did before this slice.
+- Ruling: the shader mirrors point and spot lights only; area and sun exist in the CPU model and are added to the shader when slice 3 needs them (YAGNI).
+- Ruling: `LightSource` ids are derived from position, so a station growth (map width change) re-ids lights and they cross-fade for 1 s instead of staying put. Cost if wrong: a one-second cross-fade of all lights on growth.
+- GPU vs CPU parity (apps/viewer/e2e/light-parity.py): 0/200 off at 0 and 8 lights, 1/200 at 48 (a sprite overlay).
+- Not measured: frame cost on a real GPU (only software rendering was available here).
+- Tests for `characterLevel`, `lightBudget` were written together with their implementations (no separate RED run); `CHAR_MIN` was mutation-checked.

@@ -116,3 +116,15 @@ describe("sampleLight", () => {
     expect(sampleLight(wall, 10, [{ ...lamp, x: 8.5 }], 6.5, 5.5).L).toBeCloseTo(AMB, 9);
   });
 });
+
+import { characterLevel, CHAR_MIN } from "./model";
+describe("characterLevel", () => {
+  it("never drops below the floor so nobody vanishes in the dark", () => {
+    expect(CHAR_MIN).toBe(0.38);
+    for (const L of [0, 0.1, 0.3, AMB]) expect(characterLevel(L)).toBeGreaterThanOrEqual(CHAR_MIN);
+  });
+  it("is the quantized level in bright light and rises with the light", () => {
+    expect(characterLevel(1.4)).toBe(1);
+    expect(characterLevel(0.9)).toBeGreaterThan(characterLevel(0.5));
+  });
+});

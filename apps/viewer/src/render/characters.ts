@@ -19,6 +19,9 @@ export class CharLayer {
   private fade: number[] = [];
   private known = new Set<number>();
   private lane: Array<{ x: number; y: number }> = [];   // eased lane offset in tiles, perpendicular to travel
+  /** brightness at a tile point (0..1), from the light engine; unset means unlit */
+  light: ((x: number, y: number) => number) | null = null;
+  private shade: number[] = [];                      // eased brightness per character
   private bob: number[] = [];                      // eased walking-sway amount 0..1
   private last: Array<{ x: number; y: number } | null> = [];
   style: LodStyle = "dot";
@@ -31,7 +34,7 @@ export class CharLayer {
     const first = this.known.size === 0;
     this.fade = this.ids.map((id) => (first || this.known.has(id) ? 1 : 0)); // newcomers fade in
     this.known = new Set(this.ids);
-    this.bob = this.ids.map(() => 0); this.lane = this.ids.map(() => ({ x: 0, y: 0 })); this.last = this.ids.map(() => null);
+    this.bob = this.ids.map(() => 0); this.lane = this.ids.map(() => ({ x: 0, y: 0 })); this.shade = this.ids.map(() => 1); this.last = this.ids.map(() => null);
     for (const l of this.layers.values()) { l.c.removeChildren(); l.views = []; }
   }
   private ensure(style: LodStyle) {
@@ -89,6 +92,11 @@ export class CharLayer {
           L.x += ((vertical ? off : 0) - L.x) * e; L.y += ((vertical ? 0 : off) - L.y) * e; lx = L.x; ly = L.y;
         }
         const px = (p.x + 0.5 + sway + lx) * TILE, py = (p.y + 0.5 + ly) * TILE;
+        if (s === "sprite" && raw) {                                  // lit by the room's light, eased so crossing a band edge never snaps
+          const goal = this.light ? this.light(raw.x + 0.5, raw.y + 0.5) : 1;
+          this.shade[i] += (goal - this.shade[i]) * (1 - Math.exp(-dt * 8));
+          const g = Math.round(this.shade[i] * 255); v.body.tint = (g << 16) | (g << 8) | g;
+        }
         if (s === "sprite") v.body.rotation = sway * 1.4;
         if (s === "dot") { v.body.position.set(px, py); }
         else if (s === "column") { v.body.position.set(px, py + TILE * 0.4); }
