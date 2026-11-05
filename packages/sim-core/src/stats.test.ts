@@ -17,6 +17,8 @@ describe("stationStats", () => {
     let dark = 0; for (let i = 0; i < m.tiles.length; i++) if (needsLight(m.tiles[i] as TileKind) && w.light.cover[i] === 0) dark++;
     expect(s.dark).toBe(dark); expect(s.lamps).toBe(lampsOf(w.station).length); expect(s.orders).toBe(w.light.orders.length); expect(s.built).toBe(w.light.built);
     expect(s.rooms).toBe(w.station.rooms.length);
+    let lightable = 0; for (let i = 0; i < m.tiles.length; i++) if (needsLight(m.tiles[i] as TileKind)) lightable++;
+    expect(s.lightable).toBe(lightable); expect(s.dark).toBeLessThanOrEqual(s.lightable);
   });
   it("has all zeros of needs for an empty crew instead of NaN", () => {
     const e = createWorld(3); const s = stationStats(e);

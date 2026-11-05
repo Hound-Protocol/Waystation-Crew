@@ -15,6 +15,20 @@
     #overview .ov-kind { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #4de1ff; opacity: .8; }
     #overview .ov-title { font-size: 16px; color: #e8f4fb; margin: 2px 0 8px; }
     #overview .ov-rows { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; }
+    #station-card { position: fixed; left: 50%; bottom: 18px; width: min(660px, 94vw); box-sizing: border-box; padding: 12px 16px 14px; transform: translate(-50%, 14px); opacity: 0; pointer-events: none; transition: opacity .3s ease, transform .3s ease; background: linear-gradient(160deg, rgba(20,34,48,.62), rgba(8,12,18,.72)); backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4); border: 1px solid rgba(77,225,255,.38); border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08), 0 0 22px rgba(77,225,255,.10); font-size: 11px; color: #9fb4c4; }
+    #station-card.on { opacity: 1; transform: translate(-50%, 0); }
+    #station-card .sc-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+    #station-card .sc-title { font-size: 16px; color: #e8f4fb; } #station-card .sc-sub { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #4de1ff; opacity: .85; }
+    #station-card .sc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 16px; }
+    #station-card h4 { margin: 0 0 5px; font-size: 9.5px; font-weight: normal; letter-spacing: .14em; text-transform: uppercase; color: #4de1ff; opacity: .85; display: flex; justify-content: space-between; } #station-card h4 b { color: #e8f4fb; }
+    #station-card .sc-stack { display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 1px; background: rgba(255,255,255,.06); } #station-card .sc-stack span { flex: 0 0 0; min-width: 0; transition: flex-grow .6s ease; }
+    #station-card .sc-legend { display: flex; flex-wrap: wrap; gap: 1px 8px; margin: 5px 0; font-size: 10px; } #station-card .sc-legend em { font-style: normal; } #station-card .sc-legend em::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--c); margin-right: 4px; }
+    #station-card .sc-kv { display: flex; justify-content: space-between; line-height: 1.5; } #station-card .sc-kv b, #station-card .sc-bar b { font-weight: normal; color: #e8f4fb; font-variant-numeric: tabular-nums; }
+    #station-card .sc-bar { display: grid; grid-template-columns: 44px 1fr 34px; align-items: center; gap: 6px; line-height: 1.55; } #station-card .sc-bar b { text-align: right; }
+    #station-card .sc-track { height: 5px; border-radius: 3px; background: rgba(255,255,255,.08); overflow: hidden; } #station-card .sc-track i { display: block; height: 100%; width: 100%; transform-origin: left; transform: scaleX(0); transition: transform .8s cubic-bezier(.2,.8,.2,1); border-radius: 3px; }
+    #station-card .spark { display: block; width: 100%; height: 22px; margin-top: 4px; }
+    #station-card .sc-status { color: #e8f4fb; margin-bottom: 4px; }
+    @media (max-width: 560px) { #station-card .sc-grid { grid-template-columns: repeat(2, 1fr); } }
     #overview .ov-rows b { font-weight: normal; color: #e8f4fb; text-align: right; }
     #footer { position: fixed; right: 8px; bottom: 6px; font-size: 10px; opacity: .55; pointer-events: none; }
   </style>

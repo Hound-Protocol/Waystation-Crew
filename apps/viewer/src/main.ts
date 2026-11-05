@@ -5,7 +5,7 @@ import { PadLayer, padOrigin } from "./render/padlayer";
 import type { TileKind } from "@wc/sim-core";
 import { PAD, shipPose } from "@wc/sim-core";
 import { Application, Container, Graphics, Rectangle, Sprite } from "pixi.js";
-import { STATION_NAME, type ServerMsg, type SimTransport } from "@wc/protocol";
+import { STATION_NAME, type ServerMsg, type SimTransport, type StatsSnap } from "@wc/protocol";
 import { createWorkerTransport } from "./transport/worker";
 import { Camera } from "./render/camera";
 import { Tracks } from "./render/interp";
@@ -26,6 +26,9 @@ import { zoneRadius, outlineWidth, overviewActive, footprintHit, footprintEdges,
 import { Outline, ReticleGlyph } from "./render/reticlelayer";
 import { StatusLayer } from "./render/statusicons";
 import { OverviewCard, overviewFor, type BodyInfo } from "./ui/overview";
+import { StationCard } from "./ui/stationcard";
+import { stationView } from "./ui/stationview";
+import { CrewTally } from "./ui/crewtally";
 import { SpaceLayer } from "./render/space/layer";
 
 const BUILD = (import.meta as unknown as { env: Record<string, string> }).env.VITE_BUILD?.slice(0, 7) ?? "dev";
@@ -65,6 +68,9 @@ async function boot() {
   const stationOutline = new Outline(), shipOutline = new Outline(), bodyOutline = new Outline(), glyph = new ReticleGlyph();
   world.addChild(stationOutline.g, bodyOutline.g); shipBody.addChild(shipOutline.g); app.stage.addChild(glyph.root);
   const card = new OverviewCard(document.body);
+  const stationCard = new StationCard(document.body);
+  const tally = new CrewTally(); let stats: StatsSnap | null = null; let footprint = 0;
+  const countFootprint = (tiles: ArrayLike<number>) => { let n = 0; for (let i = 0; i < tiles.length; i++) if (tiles[i] !== 0) n++; footprint = n; };
   let stationGrid: Grid = { w: 0, h: 0, solid: () => false }, shipGrid: Grid | null = null;
   const gridOf = (w: number, h: number, tiles: ArrayLike<number>): Grid => ({ w, h, solid: (x, y) => x >= 0 && y >= 0 && x < w && y < h && tiles[y * w + x] !== 0 });
   world.alpha = 0; // fades in with the first snapshot
@@ -115,7 +121,7 @@ async function boot() {
         shipBody.pivot.set((sh.w * TILE) / 2, (sh.h * TILE) / 2); berth = sh.berth; shipBody.visible = true;
       }
       if (m.shipStatus) { shipSlip = m.shipStatus.slip; shipHolding = m.shipStatus.holding; shipAboard = m.shipStatus.aboard; }
-      mapW = m.w; mapH = m.h; crew = m.chars.length;
+      mapW = m.w; mapH = m.h; crew = m.chars.length; tally.reset(m.chars); stats = m.stats ?? null; countFootprint(m.tiles);
       chars.reset(m.chars); status.reset(m.chars); tracks.reset(m.chars); panel.setChars(m.chars); if (selected !== null) select(null);
       renderTick = latestTick = m.tick; clock.reset(m.tick, speed);
       if (!fitted) {
@@ -130,10 +136,12 @@ async function boot() {
       doorLayer.reset(m.tiles, m.w, m.h, (x, y) => doorIsVertical(m.tiles, m.w, m.h, x, y));
       gateLayer.reset(m.tiles, m.w, m.h);
       stationGrid = gridOf(m.w, m.h, m.tiles); stationOutline.setEdges(footprintEdges(stationGrid));
-      mapW = m.w; mapH = m.h;
+      mapW = m.w; mapH = m.h; countFootprint(m.tiles);
     } else if (m.t === "delta") {
       if (m.shipStatus) { shipSlip = m.shipStatus.slip; shipHolding = m.shipStatus.holding; shipAboard = m.shipStatus.aboard; }
       for (const tc of m.tasks ?? []) status.setTask(tc.id, tc.task);
+      for (const sc of m.states) tally.setState(sc.id, sc.state);
+      if (m.stats) stats = m.stats;
       tracks.apply(m.moves); tracks.prune(m.tick - 120); latestTick = m.tick; speed = m.clock.speed; paused = m.clock.paused;
       panel.updateStates(m.states); panel.setClock(paused);
     } else if (m.id === selected) { panel.setInspect(m.lines); if (m.profile) pda.update(m.profile); }
@@ -213,6 +221,8 @@ async function boot() {
     hud.innerHTML = `<b>${STATION_NAME}</b> · day ${d} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} · crew ${crew} · Z${zoomLevel(cam.scale)}${paused ? " · paused" : ""}${shipHolding ? " · ship waiting for pilots" : ""}${speed !== 1 ? ` · ${speed}x` : ""}`;
     const level = zoomLevel(cam.scale), active = fitted && overviewActive(level);
     glyph.update(dt, app.screen.width, app.screen.height, active);
+    const sview = stationView({ name: STATION_NAME, tick: renderTick, shipTick: shipHold ?? renderTick - shipSlip, slip: shipSlip, holding: shipHolding, aboard: shipAboard, crew, deptCounts: tally.deptCounts(), activity: tally.activity(), footprint, stats });
+    stationCard.record(dt, sview);
     let hit: { id: string } | null = null;
     if (active) {
       const zc = cam.screenToWorld(app.screen.width / 2, app.screen.height / 2), zr = zoneRadius(app.screen.height) / cam.scale;
@@ -226,8 +236,9 @@ async function boot() {
       if (t?.circle) bodyOutline.setCircle(t.circle.c, t.circle.r);
       const bodies = new Map<string, BodyInfo>();
       for (const tg of targets) if (tg.circle) { const n = tg.id.slice(5); bodies.set(n, { name: n, kind: n === "Sun" ? "Star" : "Planet", distance: Math.hypot(tg.circle.c.x - frame.station.x, tg.circle.c.y - frame.station.y) }); }
-      card.update(dt, t ? overviewFor(t.id, { stationName: STATION_NAME, crew, clock: `day ${d} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`, shipTick: shipHold ?? renderTick - shipSlip, slip: shipSlip, holding: shipHolding, aboard: shipAboard, bodies }) : null);
-    } else card.update(dt, null);
+      card.update(dt, t && t.id !== "station" ? overviewFor(t.id, { stationName: STATION_NAME, crew, clock: `day ${d} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`, shipTick: shipHold ?? renderTick - shipSlip, slip: shipSlip, holding: shipHolding, aboard: shipAboard, bodies }) : null);
+      stationCard.update(dt, t?.id === "station" ? sview : null);
+    } else { card.update(dt, null); stationCard.update(dt, null); }
     const ow = outlineWidth(cam.scale); stationOutline.setWidth(ow); shipOutline.setWidth(ow); bodyOutline.setWidth(ow);
     stationOutline.update(dt, hit?.id === "station"); shipOutline.update(dt, hit?.id === "ship"); bodyOutline.update(dt, !!hit && hit.id.startsWith("body:"));
   });
