@@ -7,19 +7,21 @@ const smooth = (t: number) => t * t * (3 - 2 * t);
 
 /** An outline that eases in and out (no pop-ins). Lives in tile coordinates of whatever container it is added to. */
 export class Outline {
-  readonly g = new Graphics(); private a = 0;
+  readonly g = new Graphics(); private a = 0; private edges: Edge[] | null = null; private circle: { c: Pt; r: number } | null = null; private w = 0.11;
   constructor() { this.g.alpha = 0; this.g.visible = false; }
+  /** Thickness in tiles; redraws only when it changes enough to matter (each zoom step), not every frame. */
+  setWidth(w: number) { if (Math.abs(w - this.w) / this.w < 0.2) return; this.w = w; if (this.edges) this.setEdges(this.edges); else if (this.circle) this.setCircle(this.circle.c, this.circle.r); }
   /** Straight runs on tile edges: any footprint, so modular stations outline themselves. */
   setEdges(edges: Edge[]) {
-    this.g.clear();
-    for (const [w, al] of [[0.3, 0.14], [0.11, 0.9]] as const) {
+    this.edges = edges; this.circle = null; this.g.clear();
+    for (const [w, al] of [[this.w * 2.7, 0.14], [this.w, 0.9]] as const) {
       for (const e of edges) this.g.moveTo(e.x1 * TILE, e.y1 * TILE).lineTo(e.x2 * TILE, e.y2 * TILE);
       this.g.stroke({ color: CYAN, width: w * TILE, alpha: al, cap: "square", join: "miter" });
     }
   }
   setCircle(c: Pt, r: number) {
-    this.g.clear();
-    for (const [w, al] of [[0.3, 0.14], [0.11, 0.9]] as const) this.g.circle(c.x * TILE, c.y * TILE, r * TILE).stroke({ color: CYAN, width: w * TILE, alpha: al });
+    this.circle = { c, r }; this.edges = null; this.g.clear();
+    for (const [w, al] of [[this.w * 2.7, 0.14], [this.w, 0.9]] as const) this.g.circle(c.x * TILE, c.y * TILE, r * TILE).stroke({ color: CYAN, width: w * TILE, alpha: al });
   }
   update(dt: number, on: boolean) {
     this.a += ((on ? 1 : 0) - this.a) * (1 - Math.exp(-dt * 12));

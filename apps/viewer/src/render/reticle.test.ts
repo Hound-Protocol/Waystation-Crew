@@ -1,14 +1,20 @@
 import { describe, it, expect } from "vitest";
-import { zoneRadius, footprintHit, footprintEdges, shipLocal, circleHit, pickTarget, overviewActive, type Grid } from "./reticle";
+import { zoneRadius, outlineWidth, footprintHit, footprintEdges, shipLocal, circleHit, pickTarget, overviewActive, type Grid } from "./reticle";
 
 // an L-shaped modular station: a 4x2 bar with a 2x2 block hanging off its left end, notch at the right below the bar
 const L: Grid = { w: 6, h: 4, solid: (x, y) => x >= 0 && y >= 0 && x < 6 && y < 4 && ((y < 2 && x < 4) || (y >= 2 && x < 2)) };
 
 describe("reticle zone", () => {
   it("is a circle whose diameter is 20% of the screen height", () => { expect(zoneRadius(800)).toBe(80); expect(zoneRadius(1000)).toBe(100); });
-  it("only works at full-detail zoom (levels 1 and 2)", () => {
-    expect(overviewActive(1)).toBe(true); expect(overviewActive(2)).toBe(true);
-    for (const z of [3, 4, 5, 6] as const) expect(overviewActive(z)).toBe(false);
+  it("works from the whole-station view inward (levels 1 to 4), not at planet or system scale", () => {
+    for (const z of [1, 2, 3, 4] as const) expect(overviewActive(z), `Z${z}`).toBe(true);
+    for (const z of [5, 6] as const) expect(overviewActive(z), `Z${z}`).toBe(false);
+  });
+  it("the outline stays about 2 screen pixels thick at any zoom, within sane limits", () => {
+    expect(outlineWidth(48)).toBeCloseTo(0.11, 9);      // close in: the thin default
+    expect(outlineWidth(8)).toBeCloseTo(2.2 / 8, 9);
+    expect(outlineWidth(5)).toBeCloseTo(0.44, 9);
+    expect(outlineWidth(0.1)).toBe(0.5);                // never fatter than half a tile
   });
 });
 

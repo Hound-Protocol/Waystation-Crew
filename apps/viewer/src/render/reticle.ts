@@ -10,8 +10,11 @@ export interface Target { id: string; hit: (c: Pt, r: number) => boolean }
 /** Zone radius in screen pixels: the circle's diameter is 20% of the screen height. */
 export const zoneRadius = (viewH: number) => 0.1 * viewH;
 
-/** The overview works only where characters are drawn in full detail (zoom levels 1 and 2). */
-export const overviewActive = (level: ZoomLevel) => level <= 2;
+/** The overview works from the whole-station view inward (zoom levels 1 to 4). */
+export const overviewActive = (level: ZoomLevel) => level <= 4;
+
+/** Outline thickness in tiles: about 2 screen pixels at any zoom (scale = pixels per tile), between 0.11 and 0.5 tile. */
+export const outlineWidth = (scale: number) => Math.min(0.5, Math.max(0.11, 2.2 / scale));
 
 /** True when the circle (centre c, radius r, in tiles) covers any solid cell. Works for every footprint shape. */
 export function footprintHit(g: Grid, c: Pt, r: number): boolean {

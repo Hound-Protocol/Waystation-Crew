@@ -19,7 +19,7 @@ import { DoorLayer } from "./render/doors";
 import { doorIsVertical } from "./render/sprites/orient";
 import { SolarLayer } from "./render/space/solar";
 import { SYSTEM_EXTENT, BODIES, SUN_RADIUS, stationFrame } from "./render/space/system";
-import { zoneRadius, overviewActive, footprintHit, footprintEdges, shipLocal, circleHit, pickTarget, type Grid, type Pt, type Target } from "./render/reticle";
+import { zoneRadius, outlineWidth, overviewActive, footprintHit, footprintEdges, shipLocal, circleHit, pickTarget, type Grid, type Pt, type Target } from "./render/reticle";
 import { Outline, ReticleGlyph } from "./render/reticlelayer";
 import { StatusLayer } from "./render/statusicons";
 import { OverviewCard, overviewFor, type BodyInfo } from "./ui/overview";
@@ -212,6 +212,7 @@ async function boot() {
       for (const tg of targets) if (tg.circle) { const n = tg.id.slice(5); bodies.set(n, { name: n, kind: n === "Sun" ? "Star" : "Planet", distance: Math.hypot(tg.circle.c.x - frame.station.x, tg.circle.c.y - frame.station.y) }); }
       card.update(dt, t ? overviewFor(t.id, { stationName: STATION_NAME, crew, clock: `day ${d} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`, shipTick: shipHold ?? renderTick - shipSlip, slip: shipSlip, holding: shipHolding, aboard: shipAboard, bodies }) : null);
     } else card.update(dt, null);
+    const ow = outlineWidth(cam.scale); stationOutline.setWidth(ow); shipOutline.setWidth(ow); bodyOutline.setWidth(ow);
     stationOutline.update(dt, hit?.id === "station"); shipOutline.update(dt, hit?.id === "ship"); bodyOutline.update(dt, !!hit && hit.id.startsWith("body:"));
   });
   (window as unknown as { __wc: unknown }).__wc = { cam, transport, holdShip: (tick: number | null) => { shipHold = tick; }, shipAt: () => shipAt, focus: (kind: number, nth = 0) => { const id = status.find(kind, nth); if (id === null) return null; const p0 = tracks.positionAt(id, renderTick); if (!p0) return null; const p = chars.place ? chars.place(p0.x, p0.y) : p0; cam.centerOn(p.x + 0.5, p.y + 0.5, app.screen.width, app.screen.height); return id; } };

@@ -7,6 +7,7 @@
 - **State owner:** the sim. All viewers see the same lighting; it can affect gameplay.
 - **Sources:** point, spot (cone), area/strip, directional star light.
 - **Authoring:** a kinds table (fixture kind -> light) plus room defaults (ceiling lights from the room template). Grown stations light themselves.
+- **Engineering builds lamps (added later, built first):** wall lamps are sim objects (`wall:light` deco). Engineering surveys for dark gaps on a timer and builds lamps where they are missing; see "Engineering: survey and build".
 - **Power:** real grid: generators supply a total; rooms demand power; shortage sheds the lowest-priority rooms first.
 - **Shortage effects:** dimming and red emergency lighting; work stops at unpowered workstations; doors and gates fail; characters react.
 - **Characters:** lit by the local light and cast shadows.
@@ -44,3 +45,12 @@ LightSource { id; kind: "point" | "spot" | "area" | "sun"; x, y (world tiles); r
 - Everything-solid shadows are busy and can make rooms dark and hard to read; keep a floor on the ambient and a minimum light around characters, and tune with screenshots.
 - Per-frame shadow cost grows with the number of lights; the budget and culling are part of slice 1, not later.
 - Casting through a moving ship needs the occluder texture to be updated for the ship body every frame; measure early.
+
+## Engineering: survey and build (slice 0, built first)
+Lamps are real: a `wall:light` deco on a wall tile, owned by the sim. Engineering finds the gaps and builds them, shown with today's renderer (the GPU engine follows).
+- **Lamp:** mounts only where the planner already allows wall fittings (a wall tile with floor to the south, walls to the east and west, no floor to the north). It lights the walkable tiles within `LAMP_REACH = 5` tiles that it can see (line of sight blocked by walls and void).
+- **Gap:** a walkable floor tile no lamp lights. Only fixable gaps count: an order needs a free mount spot that would light at least `MIN_GAIN = 8` dark tiles. Open halls far from any wall stay as they are (the baked ambient light covers them until the engine slice).
+- **Survey:** every `SURVEY_INTERVAL = 1200` ticks (20 sim minutes), only if an Engineering lead is on shift. The lead is the highest-ranked Engineering character (lowest id breaks ties). Nothing runs on other ticks, and coverage is cached and updated incrementally as lamps are built; the cache is rebuilt only when the station grows.
+- **Orders:** greedy by gain, each pick discounting the tiles the previous ones would light, at most `MAX_ORDERS = 6` open at a time. Only the lead decides: orders go to free Engineering crew on shift (nearest first, the lead himself if nobody else is on shift). Everyone else just follows.
+- **Build:** a new action: walk to the floor tile in front of the spot, work for `BUILD_TICKS = 240` (4 min, no materials), then the lamp appears (the station rebakes and cross-fades, no pop-in). A build outranks ordinary shift work but not urgent needs. If it is interrupted or unreachable, the order is returned to the queue or the spot is struck off.
+- **Cost:** a survey is a few hundred thousand tile checks every 20 sim minutes; builds touch one 11x11 box of the coverage cache.
