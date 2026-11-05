@@ -1,6 +1,7 @@
 import { ShipLayer, shipFixtures } from "./render/ship";
 import { shipState } from "./render/shipstate";
 import { GateLayer } from "./render/gates";
+import { PadLayer } from "./render/padlayer";
 import type { TileKind } from "@wc/sim-core";
 import { Application, Container, Graphics, Sprite } from "pixi.js";
 import { STATION_NAME, type ServerMsg, type SimTransport } from "@wc/protocol";
@@ -37,8 +38,8 @@ async function boot() {
   const texs = characterTextures();
   const doorLayer = new DoorLayer(texs);
   const solar = new SolarLayer();
-  const shipLayer = new ShipLayer(), gateLayer = new GateLayer();
-  world.addChild(solar.root, mapLayer, shipLayer.root, gateLayer.root, doorLayer.root, chars.root);
+  const shipLayer = new ShipLayer(), gateLayer = new GateLayer(), padLayer = new PadLayer();
+  world.addChild(solar.root, padLayer.root, mapLayer, shipLayer.root, gateLayer.root, doorLayer.root, chars.root);
   const space = new SpaceLayer();
   app.stage.addChild(space.root, world);
   world.alpha = 0; // fades in with the first snapshot
@@ -137,6 +138,7 @@ async function boot() {
     world.alpha = worldA * worldA * (3 - 2 * worldA);
     world.scale.set(cam.scale / TILE); world.position.set(cam.tx, cam.ty);
     solar.update(dt, renderTick, cam.scale);
+    padLayer.update(performance.now() / 1000, cam.scale, { gate: 1, gateMoving: false });   // stub gate stays open until the ship is a real body (slice 2)
     shipLayer.update(shipDebug ?? shipState(renderTick), performance.now() / 1000);
     space.update(dt, cam.tx, cam.ty, app.screen.width, app.screen.height);
     if (selected !== null) {
