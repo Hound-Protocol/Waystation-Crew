@@ -58,7 +58,7 @@ async function boot() {
       doorLayer.reset(m.tiles, m.w, m.h, (x, y) => wallIsVertical(m.tiles, m.w, m.h, x, y));
       mapW = m.w; mapH = m.h; crew = m.chars.length;
       chars.reset(m.chars); tracks.reset(m.chars); panel.setChars(m.chars); if (selected !== null) select(null);
-      renderTick = latestTick = m.tick; clock.reset(m.tick);
+      renderTick = latestTick = m.tick; clock.reset(m.tick, speed);
       if (!fitted) {
         cam.fit(mapW, mapH, app.screen.width, app.screen.height);
         if (cam.scale < 10) { cam.zoomAt(app.screen.width / 2, app.screen.height / 2, 10 / cam.scale); cam.centerOn(53, 12, app.screen.width, app.screen.height); }

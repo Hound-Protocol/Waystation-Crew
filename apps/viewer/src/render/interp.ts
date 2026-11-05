@@ -56,7 +56,12 @@ export class Tracks {
     for (const m of moves) {
       let tr = this.t.get(m.id);
       if (!tr) { tr = { base: m.from, dir: "down", segs: [] }; this.t.set(m.id, tr); }
-      tr.segs.push({ start: m.startTick, pts: [m.from, ...m.path] });
+      // A walker that keeps walking arrives as one small Move per delta. Chain those onto the running segment so the
+      // whole walk is one constant-speed timeline; separate segments would restart the clock each time (pauses, jumps).
+      const last = tr.segs[tr.segs.length - 1];
+      const tail = last && last.pts[last.pts.length - 1];
+      if (last && tail && tail.x === m.from.x && tail.y === m.from.y && m.startTick - endTick(last) < 1) last.pts.push(...m.path);
+      else tr.segs.push({ start: m.startTick, pts: [m.from, ...m.path] });
     }
   }
   /** Drop segments that ended before `tick`, folding their end point into the base. Bounds memory when rendering is paused (hidden tab). */
