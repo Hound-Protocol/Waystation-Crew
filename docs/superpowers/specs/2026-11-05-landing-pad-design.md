@@ -7,6 +7,12 @@ Goal: a real place for the cargo ship to fly to, so we can test the full cycle (
 - **Pad contents (for now):** ship-sized hazard-marked pad, approach lights/beacons, a loading apron with slot markings matching the hold, and a gate stub where the outpost will attach.
 - **Trigger:** both. A dev-panel "call a ship" button for testing, plus an automatic round-trip schedule once it works.
 
+## Flight and schedule rules (TrueMan)
+- Destination: the blue home planet beside the station (needs a surface at the pad). One leg = 10 real minutes (600 ticks at 1x).
+- On landing the ship starts a 5-minute timer; it leaves early only when full (pilots close the doors and go).
+- It sticks to its schedule even half empty.
+- The game tracks whether each would-be passenger is in the boarding process (next to the ship / on the pad). If departure time arrives, anyone too far away and not on the pad is left behind; pilots take off on schedule.
+
 ## Proposed slices (each tested + deployed)
 1. Pad chunk on the planet surface (sim-core data + viewer render, visible when zoomed in on the planet).
 2. Ship as a flying rigid body: undock (gates close, bars lock, burn), flight path with easing, landing on the pad, gates open. Replaces the stand-in 30-minute routine in `render/shipstate.ts` with real state from the sim.
