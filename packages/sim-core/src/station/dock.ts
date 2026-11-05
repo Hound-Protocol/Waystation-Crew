@@ -36,6 +36,10 @@ export function buildDock(st: Station, rng: Rng): Room | null {
   // seats on the far hull face back the other way (sprites are not rotated with the blueprint)
   const ship = st.rooms[st.rooms.length - 1], mid = ship.y + ship.h / 2;
   for (const d of st.deco!) if (d.sprite === "prop:jumpseat" && d.y > mid) d.sprite = "prop:jumpseat-n";
+  // One gateway: Arrivals' airlock cells that don't face the ship's stern gate become plain wall, leaving a 2-wide run exactly as tall as the ramp
+  const gate = new Set<string>();
+  for (let y = ship.y; y < ship.y + ship.h; y++) for (let x = ship.x; x < ship.x + ship.w; x++) if (st.map.get(x, y) === TileKind.Airlock && st.map.get(x + 1, y) === TileKind.Airlock) gate.add(`${x + 1},${y}`);
+  for (let y = arrivals.y; y < arrivals.y + arrivals.h; y++) for (let x = arrivals.x; x < arrivals.x + arrivals.w; x++) if (st.map.get(x, y) === TileKind.Airlock && !gate.has(`${x},${y}`) && (st.map.get(x - 1, y) !== TileKind.Airlock)) st.map.set(x, y, TileKind.Wall);
   sealHull(st);
   void TileKind;
   return arrivals;

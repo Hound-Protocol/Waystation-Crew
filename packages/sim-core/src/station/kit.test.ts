@@ -30,7 +30,7 @@ describe("room kit", () => {
   it("every room is walled, with its door open to the outside, in all four orientations", () => {
     for (const t of ROOM_TYPES) for (const s of SEEDS.slice(0, 3)) for (const facing of DIRS) {
       const { map, placed } = stamp(t.id, s, facing);
-      expect(map.get(placed.door.x, placed.door.y), `${t.id} door`).toBe(TileKind.Door);
+      expect(t.id === "ship_deck" ? TileKind.Airlock : TileKind.Door, `${t.id} door`).toBe(map.get(placed.door.x, placed.door.y));   // the ship's "door" is its stern gateway
       expect(placed.out).toEqual(facing);
       for (let y = 0; y < 60; y++) for (let x = 0; x < 60; x++) {
         const k = map.get(x, y);

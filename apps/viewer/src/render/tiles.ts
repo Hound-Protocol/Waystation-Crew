@@ -44,7 +44,8 @@ export function buildTileCanvas(inp: BakeInput): HTMLCanvasElement {
       const m = { n: isWall(at(tx, ty - 1)), e: isWall(at(tx + 1, ty)), s: isWall(at(tx, ty + 1)), w: isWall(at(tx - 1, ty)), ne: isWall(at(tx + 1, ty - 1)), se: isWall(at(tx + 1, ty + 1)), sw: isWall(at(tx - 1, ty + 1)), nw: isWall(at(tx - 1, ty - 1)) };
       const key = maskKey(m); let im = wallCache.get(key); if (!im) { im = drawWallAuto(m); wallCache.set(key, im); }
       blit(im, tx, ty);
-    } else if (k === TileKind.Door || k === TileKind.Airlock) blit(frame(`tile:${k}`), tx, ty);
+    } else if (k === TileKind.Door) blit(frame(`tile:${k}`), tx, ty);
+    else if (k === TileKind.Airlock) blit(floorAt(10, (tx + ty) & 1), tx, ty);   // the gateway layer draws the big door over these cells
     else blit(floorAt(inp.floors?.[ty * w + tx] ?? 0, (tx + ty) & 1), tx, ty);
   }
   const lights: Light[] = [];

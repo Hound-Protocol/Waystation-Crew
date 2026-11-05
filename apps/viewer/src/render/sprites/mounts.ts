@@ -47,24 +47,22 @@ export const MOUNTS: Record<string, () => Img> = {
   "wall:viewport": () => { const im = new Img(); im.rect(0, 0, 15, 15, FR); im.rect(1, 1, 14, 1, FRL); im.rect(2, 3, 13, 12, hex("#3a3f4a")); im.rect(3, 4, 12, 11, hex("#0b1a2e")); im.rect(3, 8, 12, 11, hex("#10304f")); px(im, WHT, [5, 5], [10, 6], [7, 9]); px(im, hex("#6cc6e6"), [4, 10], [5, 9], [6, 8]); return im; },
   "wall:porthole": () => { const im = new Img(); im.rect(0, 0, 15, 15, FR); im.rect(1, 1, 14, 1, FRL); const R = hex("#3a3f4a"), G = hex("#0b1a2e"); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const d = (x - 7.5) ** 2 + (y - 7.5) ** 2; if (d <= 22) im.px(x, y, R); if (d <= 12) im.px(x, y, G); } px(im, WHT, [6, 6], [9, 8]); px(im, hex("#6cc6e6"), [5, 9], [6, 10]); return im; },
   "wall:shutter": () => { const im = new Img(); im.rect(0, 0, 15, 15, FR); im.rect(1, 1, 14, 1, FRL); for (let y = 3; y <= 12; y++) im.rect(2, y, 13, y, y % 2 ? hex("#2a2d34") : hex("#1b1e24")); px(im, AMBER, [13, 2]); px(im, hex("#b8941f"), [2, 13], [3, 13], [6, 13], [7, 13]); return im; },
-  "wall:nozzle": () => { const im = new Img(); im.rect(0, 0, 15, 15, FR); im.rect(2, 2, 13, 13, hex("#3a3f4a")); im.rect(3, 3, 12, 12, hex("#14161a")); im.rect(5, 5, 10, 10, hex("#0b0d10")); im.rect(6, 6, 9, 9, hex("#c8601a")); im.rect(7, 7, 8, 8, hex("#ffb02e")); return im; },
   "wall:panel": () => { const im = new Img(); im.rect(4, 5, 11, 10, hex("#2a2d34")); im.rect(5, 6, 10, 9, FR); px(im, GREENE, [6, 7]); px(im, AMBER, [8, 7]); px(im, RED, [9, 8]); px(im, LIME, [6, 9]); return im; },
 };
 
+/** A closed orange square, inset one pixel from the tile edge. */
+const slotSquare = (): Img => { const im = new Img(), c = hex("#c8601a"); im.rect(2, 2, 13, 2, c); im.rect(2, 13, 13, 13, c); im.rect(2, 2, 2, 13, c); im.rect(13, 2, 13, 13, c); return im; };
 const OUTLINE = hex("#2a2d34"), HI = hex("#8e9aa3");
 export const DECALS: Record<string, () => Img> = {
-  "floor:ramp": () => { const im = new Img(); im.rect(0, 0, 15, 15, hex("#241f1b")); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (((x + y) >> 2) % 2 === 0) im.px(x, y, hex("#c8601a")); im.rect(0, 0, 15, 0, hex("#06090c")); im.rect(0, 15, 15, 15, hex("#06090c")); return im; },
-  // cargo slot outlines: S = floor:slot, M = ml+mr, L = tl tr / bl br
-  "floor:slot-ml": () => { const im = new Img(); const c = hex("#c8601a"); im.rect(1, 1, 15, 1, c); im.rect(1, 14, 15, 14, c); im.rect(1, 1, 1, 14, c); return im; },
-  "floor:slot-mr": () => { const im = new Img(); const c = hex("#c8601a"); im.rect(0, 1, 14, 1, c); im.rect(0, 14, 14, 14, c); im.rect(14, 1, 14, 14, c); return im; },
-  "floor:slot-tl": () => { const im = new Img(); const c = hex("#c8601a"); im.rect(1, 1, 15, 1, c); im.rect(1, 1, 1, 15, c); return im; },
-  "floor:slot-tr": () => { const im = new Img(); const c = hex("#c8601a"); im.rect(0, 1, 14, 1, c); im.rect(14, 1, 14, 15, c); return im; },
-  "floor:slot-bl": () => { const im = new Img(); const c = hex("#c8601a"); im.rect(1, 14, 15, 14, c); im.rect(1, 0, 1, 14, c); return im; },
-  "floor:slot-br": () => { const im = new Img(); const c = hex("#c8601a"); im.rect(0, 14, 14, 14, c); im.rect(14, 0, 14, 14, c); return im; },
-  "floor:slot": () => { const im = new Img(); const c = hex("#c8601a"); for (const [x, y] of [[2, 2], [3, 2], [2, 3], [12, 2], [13, 2], [13, 3], [2, 12], [2, 13], [3, 13], [13, 12], [12, 13], [13, 13]]) im.px(x, y, c); return im; },
+  // one continuous rear ramp: vertical grip bars across the direction of travel, no tile borders, period 8 divides 16 so tiles join seamlessly
+  "floor:ramp": () => { const im = new Img(); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) im.px(x, y, x % 8 < 4 ? hex("#c8601a") : hex("#241f1b")); return im; },
+  // cargo slots: every cell is the same closed square outline (the ship blueprint is rotated when stamped, so corner pieces would land wrong)
+  "floor:slot-ml": () => slotSquare(), "floor:slot-mr": () => slotSquare(), "floor:slot-tl": () => slotSquare(),
+  "floor:slot-tr": () => slotSquare(), "floor:slot-bl": () => slotSquare(), "floor:slot-br": () => slotSquare(),
+  "floor:slot": () => slotSquare(),
   "floor:stool": () => { const im = new Img(); im.rect(5, 6, 10, 11, hex("#2a2d34")); im.rect(6, 5, 9, 12, hex("#2a2d34")); im.rect(6, 6, 9, 10, hex("#6d7580")); im.rect(6, 6, 9, 6, HI); im.rect(6, 12, 9, 12, hex("#0d0e12")); return im; },
   "floor:rug": () => { const im = new Img(); im.rect(0, 0, 15, 15, hex("#3a2a44")); im.rect(1, 1, 14, 14, hex("#52385e")); im.rect(3, 3, 12, 12, hex("#3a2a44")); im.rect(5, 5, 10, 10, hex("#7a4a8a")); return im; },
-  "floor:hazard": () => { const im = new Img(); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (x < 2 || x > 13 || y < 2 || y > 13) im.px(x, y, (x + y) % 6 < 3 ? hex("#b8941f") : hex("#15171b")); return im; },
+  "floor:hazard": () => { const im = new Img(); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (x < 2 || x > 13 || y < 2 || y > 13) im.px(x, y, (x + y) % 8 < 4 ? hex("#b8941f") : hex("#15171b")); return im; },
   "floor:lane": () => { const im = new Img(); im.rect(7, 0, 8, 15, hex("#6a6a30")); for (const y of [3, 4, 11, 12]) im.rect(7, y, 8, y, hex("#22252c")); return im; },
   "floor:arrow": () => { const im = new Img(); im.rect(7, 5, 8, 13, hex("#6d7580")); im.rect(6, 6, 9, 6, hex("#6d7580")); im.rect(5, 7, 10, 7, hex("#6d7580")); im.rect(4, 8, 11, 8, hex("#6d7580")); return im; },
   "floor:medcross": () => { const im = new Img(); im.rect(6, 2, 9, 13, hex("#8a2a2e")); im.rect(2, 6, 13, 9, hex("#8a2a2e")); im.rect(7, 3, 8, 12, hex("#a83a3e")); im.rect(3, 7, 12, 8, hex("#a83a3e")); return im; },

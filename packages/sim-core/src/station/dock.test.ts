@@ -36,8 +36,6 @@ describe("dock: the cargo ship is parked at the Arrivals hall", () => {
     expect(decoIn("prop:jumpseat") + decoIn("prop:jumpseat-n")).toBe(36);
     expect(decoIn("prop:jumpseat")).toBe(18);                   // the far hull faces back the other way
     expect(decoIn("prop:jumpseat-n")).toBe(18);
-    expect(decoIn("prop:thruster")).toBe(4);
-    expect(decoIn("wall:nozzle")).toBe(4);
     expect(decoIn("floor:slot")).toBe(12);
     expect(decoIn("floor:slot-tl")).toBe(8);
     expect(decoIn("floor:slot-ml")).toBe(8);

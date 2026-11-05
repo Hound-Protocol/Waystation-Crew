@@ -33,18 +33,20 @@ describe("ship deck: passenger line", () => {
   });
   it("has portholes along the hull beside the seats and the two boarding doors behind the flight deck", () => {
     expect(count("(")).toBeGreaterThanOrEqual(10);
-    expect(count("A")).toBe(4 + 8);                                    // 2 side doors x 2 cells each side + 8 stern airlocks (the 9th is the door)
+    expect(count("A")).toBe(4 + 9);                                    // 2 side gates x 2 cells + the 9-cell stern gateway
   });
 });
 
-describe("ship deck: engines", () => {
-  const thrusters: Array<[number, number]> = [[3, 31], [4, 32], [17, 31], [16, 32]];
-  it("has four rear thrusters, two each side of the ramp, mounted on the hull's stern edge", () => {
-    expect(count("!")).toBe(4);
-    for (const [x, y] of thrusters) { expect(at(x, y), `thruster@${x},${y}`).toBe("!"); expect(at(x, y + 1), `nozzle mouth behind ${x},${y}`).toBe("}"); }
+describe("ship deck: stern", () => {
+  it("has the whole 9x3 rear ramp as one continuous surface (no gap at the centre)", () => {
+    for (const y of range(31, 33)) for (const x of range(6, 14)) expect(at(x, y), `ramp ${x},${y}`).toBe(",");
   });
-  it("leaves the whole rear ramp clear", () => {
-    for (const y of range(31, 33)) for (const x of range(6, 14)) expect([",", "."].includes(at(x, y)), `ramp ${x},${y}`).toBe(true);
+  it("closes the stern with one 9-wide gateway: a single unbroken run of airlock cells, no small door in the middle", () => {
+    for (const x of range(6, 14)) expect(at(x, H), `gate x=${x}`).toBe("A");
+    expect(count("d")).toBe(0);
+  });
+  it("carries no in-hull thruster tiles: the engines are big external sprites", () => {
+    expect(count("!")).toBe(0); expect(count("}")).toBe(0);
   });
 });
 
@@ -63,7 +65,7 @@ describe("ship deck: cargo hold", () => {
     expect(count(";")).toBe(12);
   });
   it("every slot cell and every console is reachable on foot from the stern door", () => {
-    const open = new Set([".", "=", "h", ",", ";", "<", ">", "1", "2", "3", "4", "d"]);
+    const open = new Set([".", "=", "h", ",", ";", "<", ">", "1", "2", "3", "4", "A"]);
     const seen = new Set<string>(); const q: Array<[number, number]> = [[10, H]];
     while (q.length) {
       const [x, y] = q.pop()!; const k = `${x},${y}`;

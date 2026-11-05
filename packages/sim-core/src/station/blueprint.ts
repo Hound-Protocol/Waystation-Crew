@@ -30,8 +30,7 @@ export const GLYPHS: Record<string, GlyphDef & { prefix?: string }> = {
   // ship deck
   "~": { tile: TileKind.Prop, sprite: "prop:jumpseat" },
   ",": { tile: TileKind.Floor, sprite: "floor:ramp", layer: "floor" }, ";": { tile: TileKind.Floor, sprite: "floor:slot", layer: "floor" },
-  "@": { tile: TileKind.Prop, sprite: "prop:instruments" }, "!": { tile: TileKind.Prop, sprite: "prop:thruster" },
-  "}": { tile: TileKind.Wall, sprite: "wall:nozzle", layer: "wall" },
+  "@": { tile: TileKind.Prop, sprite: "prop:instruments" },
   // cargo slots (S = ";", M = "<" ">", L = "1 2 / 3 4") and hull windows (wall ring cells; the sprite is blitted over the wall)
   "<": { tile: TileKind.Floor, sprite: "floor:slot-ml", layer: "floor" }, ">": { tile: TileKind.Floor, sprite: "floor:slot-mr", layer: "floor" },
   "1": { tile: TileKind.Floor, sprite: "floor:slot-tl", layer: "floor" }, "2": { tile: TileKind.Floor, sprite: "floor:slot-tr", layer: "floor" },

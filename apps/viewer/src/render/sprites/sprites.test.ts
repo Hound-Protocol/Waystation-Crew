@@ -52,3 +52,42 @@ describe("atlas", () => {
     expect(a.data.length).toBe(a.width * a.height * 4);
   });
 });
+
+describe("cargo slot markers", () => {
+  // Plain closed squares: orientation-proof (the ship blueprint is rotated when stamped), and never read as hooked corner shapes.
+  const names = ["floor:slot", "floor:slot-ml", "floor:slot-mr", "floor:slot-tl", "floor:slot-tr", "floor:slot-bl", "floor:slot-br"];
+  it("are all the same closed square outline with an empty middle", async () => {
+    const { DECALS } = await import("./mounts");
+    const ref = DECALS["floor:slot"]();
+    for (const n of names) {
+      const im = DECALS[n]();
+      expect(Array.from(im.data), n).toEqual(Array.from(ref.data));
+      for (let i = 2; i <= 13; i++) for (const [x, y] of [[i, 2], [i, 13], [2, i], [13, i]]) expect(px(im, x, y).a, `${n} edge ${x},${y}`).toBe(255);
+      for (let y = 4; y <= 11; y++) for (let x = 4; x <= 11; x++) expect(px(im, x, y).a, `${n} middle ${x},${y}`).toBe(0);
+    }
+  });
+});
+
+describe("hazard stripe tiles", () => {
+  it("are full square frames whose diagonal stripes line up across neighbouring tiles (period divides 16)", async () => {
+    const { DECALS } = await import("./mounts");
+    const im = DECALS["floor:hazard"](), Y = key({ r: 0xb8, g: 0x94, b: 0x1f }), K = key({ r: 0x15, g: 0x17, b: 0x1b });
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const p = px(im, x, y), ring = x < 2 || x > 13 || y < 2 || y > 13;
+      expect(p.a, `${x},${y}`).toBe(ring ? 255 : 0);
+      if (ring) expect(key(p), `${x},${y}`).toBe((x + y) % 8 < 4 ? Y : K);
+    }
+  });
+});
+
+describe("rear ramp tile", () => {
+  it("is a borderless vertical-bar pattern that joins seamlessly with its neighbours", async () => {
+    const { DECALS } = await import("./mounts");
+    const im = DECALS["floor:ramp"]();
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      expect(key(px(im, x, y)), `${x},${y}`).toBe(key(px(im, x, 0)));                // identical down every column: no horizontal tile seams
+    }
+    expect(key(px(im, 0, 0))).not.toBe(key(px(im, 4, 0)));                             // bars alternate
+    expect(key(px(im, 0, 0))).toBe(key(px(im, 8, 0)));                                 // period 8: the right edge meets the next tile's left edge
+  });
+});

@@ -1,5 +1,6 @@
 import { ShipLayer, shipFixtures } from "./render/ship";
 import { shipState } from "./render/shipstate";
+import { GateLayer } from "./render/gates";
 import type { TileKind } from "@wc/sim-core";
 import { Application, Container, Graphics, Sprite } from "pixi.js";
 import { STATION_NAME, type ServerMsg, type SimTransport } from "@wc/protocol";
@@ -36,8 +37,8 @@ async function boot() {
   const texs = characterTextures();
   const doorLayer = new DoorLayer(texs);
   const solar = new SolarLayer();
-  const shipLayer = new ShipLayer();
-  world.addChild(solar.root, mapLayer, shipLayer.root, doorLayer.root, chars.root);
+  const shipLayer = new ShipLayer(), gateLayer = new GateLayer();
+  world.addChild(solar.root, mapLayer, shipLayer.root, gateLayer.root, doorLayer.root, chars.root);
   const space = new SpaceLayer();
   app.stage.addChild(space.root, world);
   world.alpha = 0; // fades in with the first snapshot
@@ -68,7 +69,8 @@ async function boot() {
       mapLayer.removeChildren();
       mapLayer.addChild(new Sprite(canvasTexture(buildTileCanvas({ w: m.w, h: m.h, tiles: m.tiles, rooms: m.rooms, furniture: m.furniture, deco: m.deco, floors: m.floors }))));
       doorLayer.reset(m.tiles, m.w, m.h, (x, y) => doorIsVertical(m.tiles, m.w, m.h, x, y));
-      shipLayer.reset(shipFixtures(m.deco ?? [], (x, y) => (m.tiles[y * m.w + x] ?? 0) as TileKind));
+      shipLayer.reset(shipFixtures(m.deco ?? [], (x, y) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? 0 : m.tiles[y * m.w + x]) as TileKind, m.rooms));
+      gateLayer.reset(m.tiles, m.w, m.h);
       mapW = m.w; mapH = m.h; crew = m.chars.length;
       chars.reset(m.chars); tracks.reset(m.chars); panel.setChars(m.chars); if (selected !== null) select(null);
       renderTick = latestTick = m.tick; clock.reset(m.tick, speed);
@@ -82,7 +84,8 @@ async function boot() {
       const next = new Sprite(canvasTexture(buildTileCanvas({ w: m.w, h: m.h, tiles: m.tiles, rooms: m.rooms, furniture: m.furniture, deco: m.deco, floors: m.floors })));
       next.alpha = 0; mapLayer.addChild(next); fades.push(next);
       doorLayer.reset(m.tiles, m.w, m.h, (x, y) => doorIsVertical(m.tiles, m.w, m.h, x, y));
-      shipLayer.reset(shipFixtures(m.deco ?? [], (x, y) => (m.tiles[y * m.w + x] ?? 0) as TileKind));
+      shipLayer.reset(shipFixtures(m.deco ?? [], (x, y) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? 0 : m.tiles[y * m.w + x]) as TileKind, m.rooms));
+      gateLayer.reset(m.tiles, m.w, m.h);
       mapW = m.w; mapH = m.h;
     } else if (m.t === "delta") {
       tracks.apply(m.moves); tracks.prune(m.tick - 120); latestTick = m.tick; speed = m.clock.speed; paused = m.clock.paused;
@@ -142,6 +145,7 @@ async function boot() {
     }
     markerA += ((selected !== null ? 1 : 0) - markerA) * (1 - Math.exp(-dt * 14));
     marker.alpha = markerA < 0.01 ? 0 : markerA;
+    gateLayer.update(dt, chars.ids.flatMap((id) => { const p = tracks.positionAt(id, renderTick); return p ? [p] : []; }));
     doorLayer.update(dt, chars.ids, (id) => tracks.positionAt(id, renderTick));
     chars.update(dt, renderTick, tracks, cam, app.screen.width, app.screen.height);
     const d = Math.floor((latestTick + 21600) / 86400) + 1, h = Math.floor(((latestTick / 3600) + 6) % 24), m = Math.floor((latestTick / 60) % 60);

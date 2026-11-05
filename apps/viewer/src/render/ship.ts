@@ -4,24 +4,29 @@ import { TILE } from "./tiles";
 import type { ShipState } from "./shipstate";
 
 export interface Seat { x: number; y: number; dir: 1 | -1 }                        // dir: +1 faces south (backrest on the north edge), -1 faces north
-export interface Thruster { x: number; y: number; dx: number; dy: number; run: number }   // (dx, dy): exhaust direction; run: free void tiles beyond the nozzle mouth
+/** A big external engine, 5x2 tiles, exhaust to the east. (x, y): top-left tile. strut: +1 when the hull / next engine lies at +y. run: free void tiles east of the bell. */
+export interface Thruster { x: number; y: number; w: number; h: number; strut: 1 | -1; run: number }
 interface DecoLike { x: number; y: number; sprite: string }
+interface RoomLike { name: string; x: number; y: number; w: number; h: number }
 
-/** Find the animated fixtures of the docked ship in the baked station: shoulder-bar seats and main thrusters with their free exhaust run. */
-export function shipFixtures(deco: DecoLike[], tileAt: (x: number, y: number) => TileKind): { seats: Seat[]; thrusters: Thruster[] } {
+export const ENGINE_W = 5, ENGINE_H = 2;
+
+/** The animated parts of the docked ship: shoulder-bar seats (found in the baked deco) and four external engines stacked in pairs beside the stern, in open space. */
+export function shipFixtures(deco: DecoLike[], tileAt: (x: number, y: number) => TileKind, rooms: RoomLike[]): { seats: Seat[]; thrusters: Thruster[] } {
   const seats: Seat[] = [], thrusters: Thruster[] = [];
   for (const d of deco) {
     if (d.sprite === "prop:jumpseat") seats.push({ x: d.x, y: d.y, dir: 1 });
     else if (d.sprite === "prop:jumpseat-n") seats.push({ x: d.x, y: d.y, dir: -1 });
-    else if (d.sprite === "prop:thruster") {
-      // the nozzle mouth is the wall cell behind the thruster; the docked ship's stern faces east, so look east first
-      let found: { mouth: DecoLike; dx: number; dy: number } | null = null;
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const mouth = deco.find((m) => m.sprite === "wall:nozzle" && m.x === d.x + dx && m.y === d.y + dy); if (mouth) { found = { mouth, dx, dy }; break; } }
-      if (!found) continue;
-      const { mouth, dx, dy } = found;
-      let i = 1; while (i < 3 && tileAt(mouth.x + dx * i, mouth.y + dy * i) === TileKind.Wall) i++;      // the exhaust leaves through the hull ring
-      let run = 0; while (run < 5 && tileAt(mouth.x + dx * (i + run), mouth.y + dy * (i + run)) === TileKind.Void) run++;
-      thrusters.push({ x: mouth.x, y: mouth.y, dx, dy, run: run + i - 1 });
+  }
+  const ship = rooms.find((r) => r.name === "Cargo Ship");
+  if (ship) {
+    const clear = (x: number, y: number) => { for (let j = 0; j < ENGINE_H; j++) for (let i = 0; i < ENGINE_W; i++) if (tileAt(x + i, y + j) !== TileKind.Void) return false; return true; };
+    const rows: Array<[number, 1 | -1]> = [[ship.y - 3, 1], [ship.y - 6, 1], [ship.y + ship.h + 1, -1], [ship.y + ship.h + 4, -1]];
+    for (const [y, strut] of rows) {
+      let x = ship.x + ship.w - 6;
+      while (x > ship.x && !clear(x, y)) x--;
+      let run = 0; while (run < 4 && tileAt(x + ENGINE_W + run, y + 1) === TileKind.Void) run++;
+      thrusters.push({ x, y, w: ENGINE_W, h: ENGINE_H, strut, run });
     }
   }
   return { seats, thrusters };
@@ -42,9 +47,9 @@ export class ShipLayer {
     this.seats = fx.seats; this.lastBars = -1;
     for (const j of this.jets) j.box.destroy({ children: true });
     this.jets = fx.thrusters.map((t) => {
-      const box = new Container(), g = new Graphics();
-      g.blendMode = "add"; box.addChild(g);
-      box.position.set((t.x + 0.5) * TILE, (t.y + 0.5) * TILE); box.rotation = Math.atan2(t.dy, t.dx);
+      const box = new Container(), body = new Graphics(), g = new Graphics();
+      drawEngine(body, t.strut); g.blendMode = "add";
+      box.position.set(t.x * TILE, t.y * TILE); box.addChild(body, g);
       this.root.addChild(box);
       return { box, g, t };
     });
@@ -71,11 +76,41 @@ export class ShipLayer {
   private drawJet(g: Graphics, t: Thruster, s: ShipState, time: number) {
     g.clear();
     if (s.glow <= 0.01 && s.thrust <= 0.01) return;
-    if (s.glow > 0.01) g.circle(0, 0, 5 + 2 * s.glow).fill({ color: 0xff7a1a, alpha: 0.25 * s.glow });             // nozzle heat
+    const cy = ENGINE_H * TILE / 2, mx = ENGINE_W * TILE;
+    if (s.glow > 0.01) {                                                                                            // heat glowing in the bell
+      for (let x = mx - 14; x < mx; x++) { const hh = throatHalf(x) , a = (0.18 + 0.5 * ((x - (mx - 14)) / 14)) * s.glow; g.rect(x, cy - hh, 1, hh * 2).fill({ color: 0xff7a1a, alpha: a }); }
+    }
     if (s.thrust <= 0.01) return;
     const flick = 0.92 + 0.08 * Math.sin(time * 38) * Math.sin(time * 23 + 1);
-    const len = (4 + s.thrust * (t.run * TILE + 6)) * flick;                                                       // plume reaches the end of the free run
-    for (const [w, a, c] of [[5, 0.35, 0xff4a10], [3.2, 0.55, 0xffa020], [1.6, 0.9, 0xfff2b0]] as Array<[number, number, number]>)
-      g.poly([0, -w, len * (w / 5 > 0.5 ? 0.85 : 1), -w * 0.25, len, 0, len * (w / 5 > 0.5 ? 0.85 : 1), w * 0.25, 0, w]).fill({ color: c, alpha: a * Math.min(1, s.thrust * 1.5) });
+    const len = (6 + s.thrust * (t.run * TILE + 10)) * flick, k = Math.min(1, s.thrust * 1.5);
+    for (const [w, a, c] of [[9, 0.35, 0xff4a10], [6, 0.55, 0xffa020], [3, 0.9, 0xfff2b0]] as Array<[number, number, number]>)
+      g.poly([mx - 4, cy - w, mx + len * 0.8, cy - w * 0.3, mx + len, cy, mx + len * 0.8, cy + w * 0.3, mx - 4, cy + w]).fill({ color: c, alpha: a * k });
   }
+}
+
+/** Half-height of the bell throat at pixel column x (engine-local). */
+const throatHalf = (x: number) => Math.max(2, Math.round(5 + (x - 56) * 0.24));
+
+/** Pixel-art engine, 80x32, nozzle to the east. strut: which side the mounting pylon is on (+1 = bottom). Drawn once. */
+function drawEngine(g: Graphics, strut: 1 | -1) {
+  const STEEL = 0x3a3f4a, STEEL_D = 0x2a2d34, DEEP = 0x14161a, EDGE = 0x07080b, HI = 0x8e9aa3, OR = 0xc8601a, OR_H = 0xe0741c, VOID = 0x0b0d10;
+  const R = (x0: number, y0: number, x1: number, y1: number, c: number) => g.rect(x0, y0, x1 - x0 + 1, y1 - y0 + 1).fill(c);
+  // pylon to the hull / neighbouring engine: one tile tall, off the body on the strut side
+  const py0 = strut > 0 ? 29 : -16, py1 = strut > 0 ? 47 : 2;
+  R(30, py0, 46, py1, EDGE); R(31, py0, 45, py1, STEEL_D); R(33, py0, 33, py1, STEEL); for (let y = py0 + 3; y < py1; y += 5) R(31, y, 45, y, DEEP); R(36, py0, 40, py1, STEEL);
+  // fuel tank (rear)
+  R(0, 8, 23, 23, EDGE); R(1, 9, 22, 22, STEEL_D); R(1, 9, 22, 10, STEEL); R(1, 22, 22, 22, DEEP); R(7, 9, 9, 22, OR); R(8, 9, 8, 22, OR_H); R(14, 9, 14, 22, DEEP); R(0, 11, 0, 20, HI);
+  // main housing
+  R(22, 4, 56, 27, EDGE); R(23, 5, 55, 26, STEEL); R(23, 5, 55, 6, HI); R(23, 26, 55, 26, DEEP); R(23, 7, 55, 7, STEEL_D);
+  for (const x of [28, 34, 40, 46]) { R(x, 11, x + 3, 20, DEEP); for (let y = 12; y < 20; y += 2) R(x, y, x + 3, y, VOID); }              // vent grilles
+  R(24, 5, 25, 26, OR); R(53, 5, 54, 26, OR); R(24, 5, 24, 26, OR_H);
+  R(22, 2, 62, 3, EDGE); R(23, 2, 61, 2, HI);                                                                                   // fuel line along the top
+  // bell
+  for (let x = 56; x < 80; x++) {
+    const hh = Math.round(8 + (x - 56) * 0.28), th = throatHalf(x);
+    R(x, 16 - hh - 1, x, 16 + hh, EDGE); R(x, 16 - hh, x, 16 + hh - 1, STEEL_D); R(x, 16 - hh, x, 16 - hh + 1, STEEL);
+    if (x >= 58) R(x, 16 - th, x, 16 + th - 1, VOID);
+  }
+  for (const x of [61, 67, 73]) { R(x, 16 - Math.round(8 + (x - 56) * 0.28), x, 16 + Math.round(8 + (x - 56) * 0.28) - 1, DEEP); }  // reinforcing rings
+  R(78, 16 - 10, 79, 16 + 9, OR); R(79, 16 - 10, 79, 16 + 9, OR_H);                                                              // glowing-hot rim
 }

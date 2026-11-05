@@ -53,7 +53,7 @@ export const ROOM_TYPES: RoomType[] = [
 /**
  * The balanced hauler: 21 wide x 34 long, nose at the top. A flight deck behind its own bulkhead (canopy, three stations, instruments),
  * a continuous passenger seat line down both hulls to the stern, and a hazard-framed hold between them (28 slots: 8 large, 8 medium,
- * 12 small, loader lane down the middle) opening onto the 9-wide rear ramp, flanked by four main thrusters.
+ * 12 small, loader lane down the middle) opening onto the 9-wide rear ramp and gateway. Its four main thrusters are big external sprites (viewer).
  */
 function shipDeck(): Blueprint {
   const W = 21, H = 34;
@@ -75,13 +75,12 @@ function shipDeck(): Blueprint {
     for (const y of [25, 27]) for (let x = x0; x <= x1; x += 2) c.put(x, y, ";");
   }
   for (const y of [31, 32, 33]) c.fill(6, y, 14, y, ",");                            // rear ramp
-  for (const [x, y] of [[3, 31], [4, 32], [17, 31], [16, 32]]) c.put(x, y, "!");     // four main thrusters on the stern edge, two each side of the ramp
   const bp = c.done();
   const g = bp.grid.map((r) => r.split(""));
   const ring = (x: number, y: number, ch: string) => { if (g[y + 1][x + 1] === " ") g[y + 1][x + 1] = ch; };
   for (const y of [8, 9]) { g[y + 1][0] = "A"; g[y + 1][W + 1] = "A"; }               // side boarding doors, just aft of the flight deck
-  for (let x = 6; x <= 14; x++) if (g[H + 1][x + 1] !== "d") g[H + 1][x + 1] = "A";   // stern airlocks line up with the dock
-  for (const [x, y] of [[3, 31], [4, 32], [17, 31], [16, 32]]) ring(x, y + 1, "}");   // nozzle mouths in the stern wall behind each thruster
+  for (let x = 6; x <= 14; x++) g[H + 1][x + 1] = "A";                               // one 9-wide stern gateway (no small door), lined up with the dock
+  for (const y of [31, 32, 33]) if (g[y + 1][11] === ".") g[y + 1][11] = ",";          // the ramp is one continuous surface
   for (let x = 7; x <= 13; x++) g[0][x + 1] = "[";                                    // canopy
   for (const y of [2, 3, 4, 5]) for (const side of [-1, 1]) {                         // flank viewports on the swept cockpit hull
     const x = side < 0 ? g[y + 1].findIndex((ch) => ch !== " ") - 1 : g[y + 1].length - 1 - [...g[y + 1]].reverse().findIndex((ch) => ch !== " ") + 1;
