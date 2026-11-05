@@ -37,12 +37,30 @@ export function wallVertical(side: "single" | "left" | "mid" | "right" = "single
   }
   return im;
 }
+/** The floor slot under a sliding door; the animated leaves are drawn on top by the door layer. */
 function door(): Img {
   const im = floor();
-  im.rect(0, 3, 15, 4, hex("#16181d")); im.rect(0, 11, 15, 12, hex("#16181d"));
-  im.box(0, 5, 6, 10, hex("#3a3f4a")); im.box(9, 5, 15, 10, hex("#3a3f4a")); im.rect(7, 5, 8, 10, OUT);
-  for (const x of [1, 3, 5, 10, 12, 14]) im.px(x, 7, hex("#b8941f"));
-  im.px(6, 2, RED); im.px(9, 2, RED);
+  im.rect(0, 7, 15, 8, hex("#1b1d23"));       // door track
+  return im;
+}
+/** Door overlay: frame jambs + two leaves; `open` 0..1 slides the leaves into the walls. Horizontal wall orientation. */
+export function doorFrame(open: number): Img {
+  const im = new Img();
+  im.rect(0, 2, 15, 2, hex("#16181d"));                                   // lintel
+  im.rect(0, 13, 15, 13, hex("#16181d"));                                 // sill
+  for (const x of [0, 1, 14, 15]) im.rect(x, 3, x, 12, hex("#252830"));   // jambs
+  im.rect(0, 3, 0, 12, hex("#3a3f4a"));
+  const lw = Math.round(6 * (1 - open));
+  for (let i = 0; i < lw; i++) {
+    for (const x of [2 + i, 13 - i]) im.rect(x, 3, x, 12, hex("#3a3f4a"));
+  }
+  if (lw > 0) {
+    im.rect(2, 3, 1 + lw, 3, hex("#4d5361")); im.rect(14 - lw, 3, 13, 3, hex("#4d5361"));
+    im.rect(2, 12, 1 + lw, 12, hex("#16181d")); im.rect(14 - lw, 12, 13, 12, hex("#16181d"));
+    for (let x = 3; x < 2 + lw; x += 2) { im.px(x, 7, hex("#b8941f")); im.px(15 - x, 7, hex("#b8941f")); } // hazard dashes
+    if (lw >= 6) { im.px(7, 8, hex("#16181d")); im.px(8, 8, hex("#16181d")); } // seam
+  }
+  im.px(6, 2, open < 0.5 ? RED : GREENE); im.px(9, 2, open < 0.5 ? RED : GREENE); // status lights
   return im;
 }
 function bed(): Img {

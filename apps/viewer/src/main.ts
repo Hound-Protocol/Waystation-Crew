@@ -8,6 +8,8 @@ import { buildTileCanvas, canvasTexture, characterTextures, TILE } from "./rende
 import { DevPanel } from "./ui/devpanel";
 import { zoomLevel } from "./render/lod";
 import { ClockSync } from "./render/clock";
+import { DoorLayer } from "./render/doors";
+import { wallIsVertical } from "./render/sprites/orient";
 import { SpaceLayer } from "./render/space/layer";
 
 const BUILD = (import.meta as unknown as { env: Record<string, string> }).env.VITE_BUILD?.slice(0, 7) ?? "dev";
@@ -25,12 +27,14 @@ async function boot() {
   const world = new Container();
   const mapLayer = new Container();
   const chars = new CharLayer();
-  world.addChild(mapLayer, chars.root);
+  const texs = characterTextures();
+  const doorLayer = new DoorLayer(texs);
+  world.addChild(mapLayer, doorLayer.root, chars.root);
   const space = new SpaceLayer();
   app.stage.addChild(space.root, world);
   world.alpha = 0; // fades in with the first snapshot
 
-  chars.textures = characterTextures();
+  chars.textures = texs;
   const marker = new Graphics().rect(0, 0, TILE, TILE).stroke({ color: 0x4de1ff, width: 1 });
   marker.alpha = 0; world.addChild(marker);
   const cam = new Camera(8), tracks = new Tracks();
@@ -51,6 +55,7 @@ async function boot() {
     if (m.t === "snapshot") {
       mapLayer.removeChildren();
       mapLayer.addChild(new Sprite(canvasTexture(buildTileCanvas(m.w, m.h, m.tiles, m.rooms))));
+      doorLayer.reset(m.tiles, m.w, m.h, (x, y) => wallIsVertical(m.tiles, m.w, m.h, x, y));
       mapW = m.w; mapH = m.h; crew = m.chars.length;
       chars.reset(m.chars); tracks.reset(m.chars); panel.setChars(m.chars); if (selected !== null) select(null);
       renderTick = latestTick = m.tick; clock.reset(m.tick);
@@ -111,6 +116,7 @@ async function boot() {
     }
     markerA += ((selected !== null ? 1 : 0) - markerA) * (1 - Math.exp(-dt * 14));
     marker.alpha = markerA < 0.01 ? 0 : markerA;
+    doorLayer.update(dt, chars.ids, (id) => tracks.positionAt(id, renderTick));
     chars.update(dt, renderTick, tracks, cam, app.screen.width, app.screen.height);
     const d = Math.floor((latestTick + 21600) / 86400) + 1, h = Math.floor(((latestTick / 3600) + 6) % 24), m = Math.floor((latestTick / 60) % 60);
     hud.innerHTML = `<b>${STATION_NAME}</b> · day ${d} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} · crew ${crew} · Z${zoomLevel(cam.scale)}${paused ? " · paused" : ""}${speed !== 1 ? ` · ${speed}x` : ""}`;

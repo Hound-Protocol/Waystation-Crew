@@ -4,6 +4,7 @@ import { TILE } from "./tiles";
 import type { Tracks } from "./interp";
 import type { Camera } from "./camera";
 import { lodStyle, zoomLevel, type LodStyle } from "./lod";
+import { WALK_SPEED } from "@wc/sim-core";
 
 interface View { body: Sprite; head: Sprite; dept: number }
 const STYLES: LodStyle[] = ["dot", "column", "silhouette", "sprite"];
@@ -12,10 +13,12 @@ const STYLES: LodStyle[] = ["dot", "column", "silhouette", "sprite"];
 export class CharLayer {
   readonly root = new Container();
   private layers = new Map<LodStyle, { c: Container; views: View[]; alpha: number }>();
-  private ids: number[] = [];
+  ids: number[] = [];
   private depts: number[] = [];
   private fade: number[] = [];
   private known = new Set<number>();
+  private bob: number[] = [];                      // eased walking-sway amount 0..1
+  private last: Array<{ x: number; y: number } | null> = [];
   style: LodStyle = "dot";
   textures: Map<string, Texture> | null = null;
   constructor() {
@@ -26,6 +29,7 @@ export class CharLayer {
     const first = this.known.size === 0;
     this.fade = this.ids.map((id) => (first || this.known.has(id) ? 1 : 0)); // newcomers fade in
     this.known = new Set(this.ids);
+    this.bob = this.ids.map(() => 0); this.last = this.ids.map(() => null);
     for (const l of this.layers.values()) { l.c.removeChildren(); l.views = []; }
   }
   private ensure(style: LodStyle) {
@@ -67,10 +71,22 @@ export class CharLayer {
         v.body.alpha = v.head.alpha = this.fade[i];
         v.body.visible = vis; if (s === "silhouette" || (s === "sprite" && !spr)) v.head.visible = vis;
         if (!vis || !p) continue;
-        const px = (p.x + 0.5) * TILE, py = (p.y + 0.5) * TILE;
+        // gentle left-right sway while walking, eased in and out (one full sway every two tiles)
+        if (s === "sprite") {
+          const lp = this.last[i]; const sp = lp && dt > 0 ? Math.hypot(p.x - lp.x, p.y - lp.y) / dt : 0;
+          this.last[i] = { x: p.x, y: p.y };
+          this.bob[i] += ((sp > 0.3 ? 1 : 0) - this.bob[i]) * (1 - Math.exp(-dt * 10));
+        }
+        const sway = s === "sprite" ? Math.sin(renderTick * WALK_SPEED * Math.PI) * this.bob[i] : 0;
+        const px = (p.x + 0.5 + sway * 0.05) * TILE, py = (p.y + 0.5) * TILE;
+        if (s === "sprite") v.body.rotation = sway * 0.07;
         if (s === "dot") { v.body.position.set(px, py); }
         else if (s === "column") { v.body.position.set(px, py + TILE * 0.4); }
-        else if (spr) { v.body.position.set(px, py); }
+        else if (spr) {
+          v.body.position.set(px, py);
+          const tx = this.textures!.get(p.dir === "down" ? `char:${v.dept}:${this.ids[i] % 4}` : `char:${v.dept}:${this.ids[i] % 4}:${p.dir}`);
+          if (tx && v.body.texture !== tx) v.body.texture = tx;
+        }
         else { v.body.position.set(px, py + TILE * 0.45); v.head.position.set(px, py + TILE * 0.45 - TILE * 0.5); }
       }
     }

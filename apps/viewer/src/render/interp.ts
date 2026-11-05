@@ -39,7 +39,10 @@ export function interpolatePath(path: Point[], startTick: number, nowTicks: numb
   return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f, dir: dirOf(a, b, "down") };
 }
 
-interface Seg { start: number; pts: Point[] } // pts[0] at start
+import { WALK_SPEED } from "@wc/sim-core";
+/** pts[0] is reached at `start`; pts[i] at start + i / WALK_SPEED (characters walk WALK_SPEED tiles per tick). */
+interface Seg { start: number; pts: Point[] }
+const endTick = (s: Seg) => s.start + (s.pts.length - 1) / WALK_SPEED;
 interface Track { base: Point; dir: Dir; segs: Seg[] }
 
 /** Per-character movement tracks fed by snapshots/deltas, sampled every frame. */
@@ -60,7 +63,7 @@ export class Tracks {
   prune(tick: number) {
     for (const tr of this.t.values()) {
       while (tr.segs.length) {
-        const s = tr.segs[0], end = s.start + s.pts.length - 1;
+        const s = tr.segs[0], end = endTick(s);
         if (end >= tick) break;
         tr.base = s.pts[s.pts.length - 1];
         tr.segs.shift();
@@ -72,7 +75,7 @@ export class Tracks {
     const tr = this.t.get(id);
     if (!tr) return null;
     while (tr.segs.length) {
-      const s = tr.segs[0], end = s.start + s.pts.length - 1;
+      const s = tr.segs[0], end = endTick(s);
       if (tick <= end) break;
       tr.base = s.pts[s.pts.length - 1];
       if (s.pts.length > 1) tr.dir = dirOf(s.pts[s.pts.length - 2], tr.base, tr.dir);
@@ -80,7 +83,7 @@ export class Tracks {
     }
     const s = tr.segs[0];
     if (s && tick >= s.start) {
-      const p = interpolatePath(s.pts, s.start, tick)!;
+      const p = interpolatePath(s.pts, s.start, s.start + (tick - s.start) * WALK_SPEED)!;
       tr.dir = p.dir;
       return p;
     }

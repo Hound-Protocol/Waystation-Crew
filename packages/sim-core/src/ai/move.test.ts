@@ -77,4 +77,14 @@ describe("movement", () => {
     for (let t = 0; t < 30; t++) stepMovement(w);
     expect(w.chars.x[a]).toBe(6); // eventually gets through
   });
+  it("walks 20% faster than one tile per tick: 6 tiles in 5 ticks, 1 or 2 steps per tick", () => {
+    const { w, id } = setup();
+    w.recordEvents = true;
+    const perTick: number[] = [];
+    for (let t = 0; t < 5; t++) { w.events.length = 0; stepMovement(w); perTick.push(w.events.filter((e) => e.type === "moved" && e.id === id).length); }
+    expect(w.chars.x[id]).toBe(6);
+    expect(perTick.reduce((a, b) => a + b, 0)).toBe(6);
+    expect(Math.max(...perTick)).toBe(2); expect(Math.min(...perTick)).toBe(1);
+  });
 });
+

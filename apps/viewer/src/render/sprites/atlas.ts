@@ -1,6 +1,8 @@
-import { drawTile, wallVertical } from "./tiles";
+import { drawTile, wallVertical, doorFrame } from "./tiles";
+import { rotate90 } from "./transform";
+import { DOOR_FRAMES } from "../doorframes";
 import { TileKind } from "@wc/sim-core";
-import { drawHuman, appearance } from "./human";
+import { drawHumanDir, appearance } from "./human";
 
 export interface Atlas { width: number; height: number; data: Uint8ClampedArray; frames: Record<string, { x: number; y: number; w: number; h: number }> }
 
@@ -8,7 +10,8 @@ export function buildAtlas(): Atlas {
   const items: Array<[string, { w: number; h: number; data: Uint8ClampedArray }]> = [];
   for (let k = 0; k <= 8; k++) items.push([`tile:${k}`, drawTile(k)]);
   for (const s of ["single", "left", "mid", "right"] as const) items.push([s === "single" ? "tile:2:v" : `tile:2:v${s[0]}`, wallVertical(s)]);
-  for (let d = 0; d < 6; d++) for (let v = 0; v < 4; v++) items.push([`char:${d}:${v}`, drawHuman({ ...appearance(v), dept: d })]);
+  for (let k = 0; k < DOOR_FRAMES; k++) { const f = doorFrame(k / (DOOR_FRAMES - 1)); items.push([`door:h:${k}`, f], [`door:v:${k}`, rotate90(f)]); }
+  for (let d = 0; d < 6; d++) for (let v = 0; v < 4; v++) for (const dir of ["down", "up", "left", "right"] as const) items.push([dir === "down" ? `char:${d}:${v}` : `char:${d}:${v}:${dir}`, drawHumanDir({ ...appearance(v), dept: d }, dir)]);
   const cols = 11, rows = Math.ceil(items.length / cols), width = cols * 16, height = rows * 16;
   const data = new Uint8ClampedArray(width * height * 4);
   const frames: Atlas["frames"] = {};

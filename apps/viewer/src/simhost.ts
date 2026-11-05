@@ -75,7 +75,7 @@ export class SimHost {
       for (const e of w.events) {
         if (e.type !== "moved") continue;
         const cur = open.get(e.id);
-        if (cur && cur.last === w.tick - 1) { cur.move.path.push(e.to); cur.last = w.tick; }
+        if (cur && (cur.last === w.tick - 1 || cur.last === w.tick)) { cur.move.path.push(e.to); cur.last = w.tick; }
         else {
           const move: Move = { id: e.id, startTick: w.tick - 1, from: e.from, path: [e.to] };
           moves.push(move); open.set(e.id, { move, last: w.tick });

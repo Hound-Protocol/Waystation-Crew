@@ -11,13 +11,14 @@ export interface CharStore {
   x: Float32Array; y: Float32Array;
   dept: Uint8Array; rank: Uint8Array; state: Uint8Array;
   hunger: Float32Array; energy: Float32Array; social: Float32Array; hygiene: Float32Array; fun: Float32Array;
+  walkAcc: Float32Array; // fractional walking-step budget carried between ticks
   nextDecideTick: Int32Array;
   job: Int32Array;
   names: string[];
   name(id: number): string;
 }
 
-const F32 = ["x", "y", "hunger", "energy", "social", "hygiene", "fun"] as const;
+const F32 = ["x", "y", "hunger", "energy", "social", "hygiene", "fun", "walkAcc"] as const;
 const U8 = ["dept", "rank", "state"] as const;
 
 export function createCharStore(cap = 256): CharStore {

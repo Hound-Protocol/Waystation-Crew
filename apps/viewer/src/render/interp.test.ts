@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { interpolatePath, Tracks } from "./interp";
+import { WALK_SPEED } from "@wc/sim-core";
 
 const P = (x: number, y: number) => ({ x, y });
 describe("interpolatePath", () => {
@@ -23,9 +24,9 @@ describe("Tracks", () => {
     const t = new Tracks();
     t.reset([{ id: 0, x: 0, y: 0 }]);
     t.apply([{ id: 0, startTick: 0, from: P(0, 0), path: [P(1, 0), P(2, 0)] }, { id: 0, startTick: 5, from: P(2, 0), path: [P(2, 1)] }]);
-    expect(t.positionAt(0, 1.5)).toMatchObject({ x: 1.5, y: 0 });
+    expect(t.positionAt(0, 1.5 / WALK_SPEED)).toMatchObject({ x: 1.5, y: 0 });
     expect(t.positionAt(0, 3)).toMatchObject({ x: 2, y: 0 });
-    expect(t.positionAt(0, 5.5)).toMatchObject({ x: 2, y: 0.5 });
+    expect(t.positionAt(0, 5 + 0.5 / WALK_SPEED)).toMatchObject({ x: 2, y: 0.5 });
     expect(t.positionAt(0, 50)).toMatchObject({ x: 2, y: 1 });
     expect(t.segmentCount(0)).toBe(0);
   });
