@@ -87,18 +87,16 @@ export class Canvas {
   }
 }
 
+/** Rooms are boxy, like a real station's: rectangles with chamfered corners, notches and wings (the Box/Icebox look). */
+const chamfer = (w: number, h: number, c: number) => (x: number, y: number) => !(x + y < c || w - 1 - x + y < c || x + h - 1 - y < c || w - 1 - x + h - 1 - y < c);
 export const Shapes = {
-  octagon: (w: number, h: number, c: number) => new Canvas(w, h, (x, y) => !(x + y < c || w - 1 - x + y < c || x + h - 1 - y < c || w - 1 - x + h - 1 - y < c)),
-  ellipse: (w: number, h: number) => new Canvas(w, h, ell),
+  octagon: (w: number, h: number, c: number) => new Canvas(w, h, chamfer(w, h, Math.min(c, 3))),
+  ellipse: (w: number, h: number) => new Canvas(w, h, chamfer(w, h, 2)),
   cross: (w: number, h: number, aw: number, ah: number) => new Canvas(w, h, (x, y) => Math.abs(x + 0.5 - w / 2) < aw / 2 || Math.abs(y + 0.5 - h / 2) < ah / 2),
   lshape: (w: number, h: number, cw: number, ch: number) => new Canvas(w, h, (x, y) => !(x >= w - cw && y < ch)),
-  hexa: (w: number, h: number) => new Canvas(w, h, (x, y) => Math.abs(x + 0.5 - w / 2) <= w / 2 - Math.abs(y + 0.5 - h / 2) * (w / 2 / (h / 2)) * 0.55),
-  crescent: (w: number, h: number) => new Canvas(w, h, (x, y) => ell(x, y, w, h) && Math.hypot(x + 0.5 - w * 0.6, y + 0.5 - h * 0.36) >= Math.min(w, h) * 0.3),
-  blob: (w: number, h: number, ph: number) => new Canvas(w, h, (x, y) => {
-    const dx = (x + 0.5 - w / 2) / (w / 2), dy = (y + 0.5 - h / 2) / (h / 2), a = Math.atan2(dy, dx);
-    const r = 0.86 + 0.09 * Math.sin(2 * a + ph) + 0.06 * Math.sin(3 * a + ph * 1.7);
-    return Math.hypot(dx, dy) <= r;
-  }),
+  hexa: (w: number, h: number) => new Canvas(w, h, chamfer(w, h, 3)),
+  crescent: (w: number, h: number) => new Canvas(w, h, (x, y) => chamfer(w, h, 2)(x, y) && !(Math.abs(x + 0.5 - w / 2) < w / 6 && y < 2)),
+  blob: (w: number, h: number, ph: number) => new Canvas(w, h, (x, y) => chamfer(w, h, 2)(x, y) && !(ph > 1 ? x >= w - 4 && y < 3 : x < 3 && y < 3)),
   tee: (w: number, h: number, sw: number, sh: number) => new Canvas(w, h, (x, y) => y < sh || Math.abs(x + 0.5 - w / 2) < sw / 2),
 };
 

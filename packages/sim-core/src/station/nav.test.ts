@@ -92,11 +92,11 @@ describe("starter station", () => {
     const touching = st.rooms.filter((a) => st.rooms.some((b) => b.id !== a.id && gap(a, b) <= 3));
     expect(touching.length).toBeGreaterThanOrEqual(st.rooms.length - 2);
   });
-  it("is compact: every module within 50 tiles of the plaza and links stay short", () => {
-    for (const r of st.rooms) expect(Math.hypot(r.x + r.w / 2 - HUB.x, r.y + r.h / 2 - HUB.y), r.name).toBeLessThan(50);
+  it("is compact: every module within 60 tiles of the plaza and streets stay bounded", () => {
+    for (const r of st.rooms) expect(Math.hypot(r.x + r.w / 2 - HUB.x, r.y + r.h / 2 - HUB.y), r.name).toBeLessThan(60);
     let corridor = 0;
     for (let i = 0; i < st.map.tiles.length; i++) if (st.map.tiles[i] === TileKind.Floor && st.floors![i] === 0) corridor++;
-    expect(corridor).toBeLessThan(900);
+    expect(corridor).toBeLessThan(1400);
   });
   it.each([2, 3, 4, 5])("builds and connects every module for seed %i", (seed) => {
     const s2 = buildStarterStation(seed), plaza = { x: HUB.x - 4, y: HUB.y + 5 };

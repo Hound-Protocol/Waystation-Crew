@@ -9,7 +9,7 @@ const CX = 80, CY = 80, PLAZA_R = 9;
 /** Centre of the plaza hub; the walkable open floor everything hangs off. */
 export const HUB = { x: CX, y: CY };
 /** Longest connecting corridor, in tiles. Modules are slapped together; links stay short. */
-const MAX_LINK = 30, LINK_WEIGHT = 2.4;     // modules dock on the spokes; every link tile costs, so short links win
+const MAX_LINK = 10, LINK_WEIGHT = 5;     // modules dock on the spokes; every link tile costs, so short links win
 
 /** Build order: arrivals first, then the departments, then the habitation blocks. Every kind gets 5 stored presets (modules/presets.ts). */
 export const STARTER_ORDER: ModuleKind[] = [
@@ -104,16 +104,16 @@ export function buildStarterStation(seed = 1): Station {
     if (Math.hypot(x - CX, y - CY) <= r) { map.set(x, y, TileKind.Floor); floors[y * STATION_W + x] = 8; }
   }
 
-  // spokes: short corridor spines radiating from the plaza, with a side branch; modules get slapped on along them
-  const spokes = 7, start = rng.int(0, 359);
-  for (let i = 0; i < spokes; i++) {
-    const a = ((start + (i * 360) / spokes + rng.int(-14, 14)) * Math.PI) / 180, len = rng.int(13, 19), dx = Math.cos(a), dy = Math.sin(a);
+  // streets: a central cross plus a ring road, three tiles wide (the Box/Icebox arrangement). Modules dock onto them.
+  const street = (x0: number, y0: number, x1: number, y1: number) => {
     const line: P[] = [];
-    for (let t = PLAZA_R - 2; t <= PLAZA_R + len; t++) line.push({ x: Math.round(CX + dx * t), y: Math.round(CY + dy * t) });
-    const bt = PLAZA_R + Math.round(len * 0.6), bs = i % 2 ? 1 : -1, bl = rng.int(5, 8);
-    for (let t = 1; t <= bl; t++) line.push({ x: Math.round(CX + dx * bt - dy * bs * t), y: Math.round(CY + dy * bt + dx * bs * t) });
-    carve(map, floors, line, true);
-  }
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) for (let w = -1; w <= 1; w++) line.push(y0 === y1 ? { x, y: y + w } : { x: x + w, y });
+    carve(map, floors, line, false);
+  };
+  const ARM = 38, RING = 25;
+  street(CX - ARM, CY, CX + ARM, CY); street(CX, CY - ARM, CX, CY + ARM);
+  street(CX - RING, CY - RING, CX + RING, CY - RING); street(CX - RING, CY + RING, CX + RING, CY + RING);
+  street(CX - RING, CY - RING, CX - RING, CY + RING); street(CX + RING, CY - RING, CX + RING, CY + RING);
 
   // candidate offsets, nearest to the hub first
   const offsets: P[] = [];
@@ -148,6 +148,12 @@ export function buildStarterStation(seed = 1): Station {
     stampModule(target, preset, best.cx, best.cy, best.facing);
     carve(map, floors, best.path, true);
   }
+  // solid hull between modules: void pockets sealed off from open space become wall
+  const open = new Uint8Array(STATION_W * STATION_H), stack: number[] = [];
+  const mark = (x: number, y: number) => { if (map.inBounds(x, y) && map.get(x, y) === TileKind.Void && !open[y * STATION_W + x]) { open[y * STATION_W + x] = 1; stack.push(y * STATION_W + x); } };
+  for (let i = 0; i < STATION_W; i++) { mark(i, 0); mark(i, STATION_H - 1); mark(0, i); mark(STATION_W - 1, i); }
+  while (stack.length) { const k = stack.pop()!, x = k % STATION_W, y = Math.floor(k / STATION_W); mark(x + 1, y); mark(x - 1, y); mark(x, y + 1); mark(x, y - 1); }
+  for (let y = 0; y < STATION_H; y++) for (let x = 0; x < STATION_W; x++) if (map.get(x, y) === TileKind.Void && !open[y * STATION_W + x]) map.set(x, y, TileKind.Wall);
   // walls around corridors and plaza
   for (let y = 0; y < STATION_H; y++) for (let x = 0; x < STATION_W; x++) ringWall(map, x, y);
   // plaza dressing: holo table, benches and planters
