@@ -9,6 +9,9 @@ export const GRID = {
   /** ticks a full battery lasts at the base load, and ticks to charge it from empty with spare supply */ batteryTicks: 1800, chargeTicks: 600,
 };
 
+/** Fuel a ship brings to the station store on each arrival (a share of a full tank). */
+export const FUEL_DELIVERY = 0.3;
+
 export interface PowerGrid {
   reactor: ReactorState;
   /** battery bank charge, 0..1 */ battery: number;
@@ -40,3 +43,6 @@ export function stepGrid(w: World): void {
   g.doorsPowered = shortfall === 0 || g.battery > 0;
   g.lifeSupportDown = !g.doorsPowered;
 }
+
+/** A ship has just docked: its fuel goes into the store. */
+export function deliverFuel(w: World): void { w.power.fuelStore = Math.min(1, w.power.fuelStore + FUEL_DELIVERY); }

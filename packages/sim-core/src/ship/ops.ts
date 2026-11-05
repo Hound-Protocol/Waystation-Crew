@@ -1,3 +1,4 @@
+import { deliverFuel } from "../power/grid";
 import type { World } from "../world";
 import type { Station } from "../station/starter";
 import type { Action } from "../ai/affordances";
@@ -60,6 +61,7 @@ export function stepShip(w: World): void {
   sh.holding = false;
   if (p.at === "station" && p.phase === "docked") {
     sh.crew = [];
+    if (p.t === 0) deliverFuel(w);                                  // the arrival tick, once per cycle
     if (p.t === p.dur - 1) {
       const seats = flightSeats(w.station);
       if (!seats || !seated(w, seats.pilot) || !seated(w, seats.copilot)) { sh.slip++; sh.holding = true; }

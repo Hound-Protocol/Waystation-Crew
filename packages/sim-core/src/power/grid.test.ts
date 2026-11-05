@@ -54,3 +54,26 @@ describe("power grid", () => {
     const a = fresh(), b = fresh(); b.power.battery = 0.3; expect(hashWorld(a)).not.toBe(hashWorld(b));
   });
 });
+
+import { stepShip } from "../ship/ops";
+import { FUEL_DELIVERY } from "./grid";
+
+describe("fuel delivery", () => {
+  // the ship's cycle is shifted by 180 ticks, so tick 2820 is the first tick of a docked segment
+  it("a ship arrival adds the fuel delivery to the store", () => {
+    const w = fresh(); w.power.fuelStore = 0.2; w.tick = 2820; stepShip(w);
+    expect(w.power.fuelStore).toBeCloseTo(0.2 + FUEL_DELIVERY, 9);
+  });
+  it("the store caps at 1", () => {
+    const w = fresh(); w.power.fuelStore = 0.9; w.tick = 2820; stepShip(w);
+    expect(w.power.fuelStore).toBe(1);
+  });
+  it("no arrival means no delivery", () => {
+    for (const t of [2819, 2821, 100, 1500]) { const w = fresh(); w.power.fuelStore = 0.2; w.tick = t; stepShip(w); expect(w.power.fuelStore).toBe(0.2); }
+  });
+  it("a ship held at the door by missing pilots delivers nothing more", () => {
+    const w = fresh(); w.power.fuelStore = 0.2; w.tick = 2820; stepShip(w); const after = w.power.fuelStore;
+    for (let i = 0; i < 100; i++) { w.tick++; stepShip(w); }
+    expect(w.power.fuelStore).toBe(after);
+  });
+});
