@@ -5,7 +5,7 @@ import { GROWTH_INTERVAL, CYCLE } from "@wc/sim-core";
 const base = (o: Partial<StationCtx> = {}): StationCtx => ({
   name: "Waystation Crew", tick: 86400 + 3600 * 5, shipTick: 100, slip: 0, holding: false, aboard: 0, crew: 60,
   deptCounts: [3, 14, 6, 8, 12, 12, 5], activity: { working: 30, eating: 5, sleeping: 10, relaxing: 5 }, footprint: 4200,
-  stats: { needs: { hunger: 0.8, energy: 0.6, social: 0.5, hygiene: 0.9, fun: 0.4 }, lamps: 40, lightable: 1000, dark: 100, orders: 2, built: 5, rooms: 22 }, ...o,
+  stats: { needs: { hunger: 0.8, energy: 0.6, social: 0.5, hygiene: 0.9, fun: 0.4 }, lamps: 40, lightable: 1000, dark: 100, orders: 2, built: 5, rooms: 22, power: { status: "running", output: 0.6, demand: 0.5, battery: 0.9, fuel: 0.55, fuelStore: 0.3, supplyLevel: 1 } }, ...o,
 });
 
 describe("stationView", () => {
@@ -47,5 +47,21 @@ describe("stationView", () => {
   it("copes with no stats yet", () => {
     const v = stationView(base({ stats: null }));
     expect(v.mood.avg).toBe(0); expect(v.lights.litShare).toBe(1); expect(v.facts.rooms).toBe(0);
+  });
+  it("reports the power block: status, output against demand, battery and fuel", () => {
+    const p = stationView(base()).power;
+    expect(p.status).toBe("Running"); expect(p.output).toBeCloseTo(0.6, 9); expect(p.demand).toBeCloseTo(0.5, 9); expect(p.battery).toBeCloseTo(0.9, 9); expect(p.fuel).toBeCloseTo(0.55, 9);
+    expect(p.load).toBeCloseTo(0.5 / 0.6, 9);
+  });
+  it("names the other reactor states plainly", () => {
+    const st = (status: "offline" | "starting" | "running" | "scram") => stationView(base({ stats: { ...base().stats!, power: { ...base().stats!.power, status } } })).power.status;
+    expect(st("scram")).toBe("Scram, blackout"); expect(st("starting")).toBe("Restarting"); expect(st("offline")).toBe("Offline");
+  });
+  it("shows a brownout as a load above the output and clamps load to 1.5 for the bar", () => {
+    const v = stationView(base({ stats: { ...base().stats!, power: { ...base().stats!.power, output: 0.2, demand: 0.9, supplyLevel: 0.22 } } })).power;
+    expect(v.load).toBeGreaterThan(1); expect(v.load).toBeLessThanOrEqual(1.5);
+  });
+  it("has zeros and Offline when there are no stats yet", () => {
+    const p = stationView(base({ stats: null })).power; expect(p.status).toBe("Offline"); expect(p.output).toBe(0); expect(p.load).toBe(0);
   });
 });

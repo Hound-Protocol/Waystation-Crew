@@ -38,6 +38,7 @@ export class StationCard {
   private title = el("div", "sc-title"); private sub = el("div", "sc-sub");
   private stack = el("div", "sc-stack"); private legend: HTMLElement[] = []; private legendText: HTMLElement[] = [];
   private actVals: HTMLElement[] = []; private moodBars: Bar[] = []; private moodAvg = el("b"); private moodSpark!: Spark;
+  private pwStatus = el("div", "sc-status"); private loadBar!: Bar; private battBar!: Bar; private fuelBar!: Bar;
   private litBar!: Bar; private litSpark!: Spark; private lightVals: Record<string, HTMLElement> = {};
   private shipStatus = el("div", "sc-status"); private shipBar!: Bar; private shipNext = el("b"); private shipAboard = el("b"); private shipDelayRow = el("div", "sc-kv");  private shipDelay = el("b");
   private growBar!: Bar; private factVals: Record<string, HTMLElement> = {};
@@ -59,6 +60,8 @@ export class StationCard {
     this.moodSpark = new Spark(mood, "#5fe3a1");
 
     const lights = el("section", "sc-sec", grid); el("h4", "", lights).textContent = "Power & lighting";
+    lights.appendChild(this.pwStatus);
+    this.loadBar = new Bar(lights, "Load", "linear-gradient(90deg,#5fe3a1,#ffd24d)"); this.battBar = new Bar(lights, "Battery", "linear-gradient(90deg,#4de1ff,#6ba6ff)"); this.fuelBar = new Bar(lights, "Fuel", "linear-gradient(90deg,#ff9a4d,#ffd24d)");
     this.litBar = new Bar(lights, "Lit", "linear-gradient(90deg,#ffb84d,#ffe58a)"); this.litSpark = new Spark(lights, "#ffd24d");
     const lk = el("div", "sc-kvs", lights);
     for (const [key, label] of [["lamps", "Lamps"], ["dark", "Dark tiles"], ["orders", "Orders"], ["built", "Built"]] as const) { const r = el("div", "sc-kv", lk); el("span", "", r).textContent = label; this.lightVals[key] = el("b", "", r); }
@@ -82,6 +85,9 @@ export class StationCard {
     v.depts.forEach((d, i) => { const t = `${d.name} ${d.count}`; if (this.legendText[i].textContent !== t) this.legendText[i].textContent = t; });
     v.activity.forEach((a, i) => { const row = this.actVals[i].parentElement!; (row.firstChild as HTMLElement).textContent = a.label; const t = String(a.count); if (this.actVals[i].textContent !== t) this.actVals[i].textContent = t; });
     v.mood.items.forEach((m, i) => this.moodBars[i].set(m.value)); this.moodAvg.textContent = pct(v.mood.avg);
+    this.pwStatus.textContent = v.power.status; this.pwStatus.classList.toggle("bad", v.power.status !== "Running");
+    this.loadBar.set(v.power.load / 1.5, v.power.output > 0 || v.power.demand > 0 ? `${Math.round(v.power.load * 100)}%` : "0%");
+    this.battBar.set(v.power.battery); this.fuelBar.set(v.power.fuel);
     this.litBar.set(v.lights.litShare);
     for (const k of ["lamps", "dark", "orders", "built"] as const) { const t = String(v.lights[k]); if (this.lightVals[k].textContent !== t) this.lightVals[k].textContent = t; }
     this.shipStatus.textContent = v.ship.status; this.shipBar.set(v.ship.progress, ""); this.shipNextLabel.textContent = v.ship.nextLabel;

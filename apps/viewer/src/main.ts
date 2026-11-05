@@ -28,6 +28,7 @@ import { StatusLayer } from "./render/statusicons";
 import { OverviewCard, overviewFor, type BodyInfo } from "./ui/overview";
 import { StationCard } from "./ui/stationcard";
 import { ZoomMarkers } from "./render/zoommarkers";
+import { ReactorFx } from "./render/reactorfx";
 import { stationView } from "./ui/stationview";
 import { CrewTally } from "./ui/crewtally";
 import { SpaceLayer } from "./render/space/layer";
@@ -63,7 +64,9 @@ async function boot() {
   // the ship: its baked deck, its animated parts and its own gates, all in deck-local coordinates, moved and turned as one body
   const shipBody = new Container(), shipBake = new Container(), shipGates = new GateLayer();
   shipBody.addChild(shipBake, shipLayer.root, shipGates.root); shipBody.visible = false;
-  world.addChild(solar.root, padLayer.root, mapLayer, gateLayer.root, shipBody, doorLayer.root, chars.root, status.root);
+  const reactorFx = new ReactorFx();
+  const reactorSite = (deco?: Array<{ x: number; y: number; sprite: string }>) => reactorFx.setSite(deco?.find((d) => d.sprite === "prop:reactor") ?? null);
+  world.addChild(solar.root, padLayer.root, mapLayer, reactorFx.root, gateLayer.root, shipBody, doorLayer.root, chars.root, status.root);
   const space = new SpaceLayer();
   app.stage.addChild(space.root, world);
   const stationOutline = new Outline(), shipOutline = new Outline(), bodyOutline = new Outline(), glyph = new ReticleGlyph();
@@ -109,7 +112,7 @@ async function boot() {
   transport.onMessage((m: ServerMsg) => {
     if (m.t === "snapshot") {
       mapLayer.removeChildren().forEach((c) => c.destroy({ texture: true }));
-      mapLayer.addChild(stationSprite(m));
+      mapLayer.addChild(stationSprite(m)); reactorSite(m.deco);
       doorLayer.reset(m.tiles, m.w, m.h, (x, y) => doorIsVertical(m.tiles, m.w, m.h, x, y));
       gateLayer.reset(m.tiles, m.w, m.h);
       stationGrid = gridOf(m.w, m.h, m.tiles); stationOutline.setEdges(footprintEdges(stationGrid));
@@ -133,7 +136,7 @@ async function boot() {
       }
     } else if (m.t === "station") {
       // station grew: bake the new map under the old one and cross-fade (no pop-in)
-      const next = stationSprite(m);
+      const next = stationSprite(m); reactorSite(m.deco);
       next.alpha = 0; mapLayer.addChild(next); fades.push(next);
       doorLayer.reset(m.tiles, m.w, m.h, (x, y) => doorIsVertical(m.tiles, m.w, m.h, x, y));
       gateLayer.reset(m.tiles, m.w, m.h);
@@ -203,6 +206,7 @@ async function boot() {
       shipBody.position.set(pl.x * TILE, pl.y * TILE); shipBody.rotation = pl.rot; shipAt = pl; chars.place = aboardPlace(berth, pl);
       if (followShip) cam.followToward(pl.x, pl.y, app.screen.width, app.screen.height, dt);
     }
+    reactorFx.update(dt, performance.now() / 1000, stats ? stats.power : null);
     zoomMarkers.update(dt, cam, { x: mapW / 2, y: mapH / 2 }, berth ? shipAt : null);
     shipLayer.update(pose, time);
     const aboard = pose.at === "station" ? pose.stationGate : pose.at === "pad" ? pose.padGate : { v: 0, moving: false };   // the ship's gates follow the dock it sits at

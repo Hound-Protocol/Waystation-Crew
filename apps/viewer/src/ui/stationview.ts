@@ -5,6 +5,7 @@ export const MOOD_KEYS = ["hunger", "energy", "social", "hygiene", "fun"] as con
 export type MoodKey = (typeof MOOD_KEYS)[number];
 
 export interface StatsIn {
+  power: { status: "offline" | "starting" | "running" | "scram"; output: number; demand: number; battery: number; fuel: number; fuelStore: number; supplyLevel: number };
   needs: Record<MoodKey, number>; lamps: number; lightable: number; dark: number; orders: number; built: number; rooms: number;
 }
 export interface StationCtx {
@@ -26,6 +27,7 @@ export interface StationView {
   activity: { label: string; count: number }[];
   mood: { avg: number; items: { key: MoodKey; value: number }[] };
   lights: { lamps: number; dark: number; orders: number; built: number; litShare: number };
+  power: { status: string; output: number; demand: number; battery: number; fuel: number; fuelStore: number; supplyLevel: number; /** demand over output for a gauge, 0..1.5 (above 1 is a brownout) */ load: number };
   ship: { status: string; nextLabel: string; next: number; progress: number; aboard: number; delay: number };
   facts: { rooms: number; footprint: number; day: number; growth: number };
 }
@@ -46,6 +48,11 @@ export function stationView(c: StationCtx): StationView {
     litShare: s && s.lightable > 0 ? 1 - s.dark / s.lightable : 1,
   };
 
+  const pw = s?.power, STATUS = { offline: "Offline", starting: "Restarting", running: "Running", scram: "Scram, blackout" } as const;
+  const power = pw
+    ? { status: STATUS[pw.status], output: pw.output, demand: pw.demand, battery: pw.battery, fuel: pw.fuel, fuelStore: pw.fuelStore, supplyLevel: pw.supplyLevel, load: pw.output > 0 ? Math.min(1.5, pw.demand / pw.output) : pw.demand > 0 ? 1.5 : 0 }
+    : { status: "Offline" as string, output: 0, demand: 0, battery: 0, fuel: 0, fuelStore: 0, supplyLevel: 1, load: 0 };
+
   const p = shipPhase(c.shipTick), arrive = arrivalIn(c.shipTick);
   const status = p.phase === "docked" ? "Docked" : p.phase === "landed" ? "On the pad"
     : p.phase === "flight" ? `In flight, ${p.leg === "out" ? "to the planet" : "to the station"}` : (PREP_LABEL[p.phase] ?? p.phase);
@@ -59,7 +66,7 @@ export function stationView(c: StationCtx): StationView {
 
   const day = Math.floor(c.tick / SECONDS_PER_DAY) + 1;
   return {
-    title: c.name, day, depts, activity, mood: { avg, items }, lights, ship,
+    title: c.name, day, depts, activity, mood: { avg, items }, lights, power, ship,
     facts: { rooms: s?.rooms ?? 0, footprint: c.footprint, day, growth: (c.tick % GROWTH_INTERVAL) / GROWTH_INTERVAL },
   };
 }
