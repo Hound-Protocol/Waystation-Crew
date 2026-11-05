@@ -1,8 +1,9 @@
 import { ShipLayer, shipFixtures } from "./render/ship";
 import { shipState } from "./render/shipstate";
 import { GateLayer } from "./render/gates";
-import { PadLayer } from "./render/padlayer";
+import { PadLayer, padOrigin } from "./render/padlayer";
 import type { TileKind } from "@wc/sim-core";
+import { PAD } from "@wc/sim-core";
 import { Application, Container, Graphics, Sprite } from "pixi.js";
 import { STATION_NAME, type ServerMsg, type SimTransport } from "@wc/protocol";
 import { createWorkerTransport } from "./transport/worker";
@@ -64,7 +65,11 @@ async function boot() {
     panel.select(id); transport.send({ t: "inspect", id });
   };
   const pda = new Pda(() => select(null));
-  const panel = new DevPanel({ send: (m) => transport.send(m), onSelect: (id) => select(id) });
+  const panel = new DevPanel({ send: (m) => transport.send(m), onSelect: (id) => select(id), onGoto: (where) => {
+    if (selected !== null) select(null);
+    if (where === "pad") cam.glideTo(padOrigin().x + PAD.w / 2, padOrigin().y + PAD.h / 2, 10, app.screen.width, app.screen.height);
+    else cam.glideTo(mapW / 2, mapH / 2, 10, app.screen.width, app.screen.height);
+  } });
   transport.onMessage((m: ServerMsg) => {
     if (m.t === "snapshot") {
       mapLayer.removeChildren();

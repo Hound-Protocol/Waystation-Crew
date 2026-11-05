@@ -6,25 +6,41 @@ export class Camera {
   targetScale: number;
   private anchor: { sx: number; sy: number; wx: number; wy: number } | null = null;
   private vx = 0; private vy = 0;
+  private glide: { wx: number; wy: number; scale: number; vw: number; vh: number } | null = null;
   constructor(public scale: number) { this.targetScale = scale; }
   screenToWorld(sx: number, sy: number) { return { x: (sx - this.tx) / this.scale, y: (sy - this.ty) / this.scale }; }
-  pan(dx: number, dy: number) { this.tx += dx; this.ty += dy; this.vx = this.vy = 0; }
+  pan(dx: number, dy: number) { this.glide = null; this.tx += dx; this.ty += dy; this.vx = this.vy = 0; }
   zoomAt(sx: number, sy: number, factor: number) {
     const before = this.screenToWorld(sx, sy);
     this.scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, this.scale * factor));
-    this.targetScale = this.scale; this.anchor = null;
+    this.targetScale = this.scale; this.anchor = null; this.glide = null;
     this.tx = sx - before.x * this.scale; this.ty = sy - before.y * this.scale;
   }
   /** Eased zoom: the point under (sx, sy) stays fixed while the scale glides to its target. */
   zoomAtSmooth(sx: number, sy: number, factor: number) {
     const w = this.screenToWorld(sx, sy);
     this.targetScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, this.targetScale * factor));
-    this.anchor = { sx, sy, wx: w.x, wy: w.y };
+    this.anchor = { sx, sy, wx: w.x, wy: w.y }; this.glide = null;
+  }
+  /** Eased flight: the view centre drifts to world point (wx, wy) while the zoom glides to `scale`. Any manual pan or zoom cancels it. */
+  glideTo(wx: number, wy: number, scale: number, viewW: number, viewH: number) {
+    this.glide = { wx, wy, scale: Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale)), vw: viewW, vh: viewH };
+    this.targetScale = this.scale; this.anchor = null; this.vx = this.vy = 0;
   }
   /** Start a pan with momentum (px/s); it decays with friction in update(). */
   fling(vx: number, vy: number) { this.vx = vx; this.vy = vy; }
   /** Per-frame easing: zoom glide, pan momentum. Exponential, so it never overshoots. */
   update(dt: number) {
+    if (this.glide) {
+      const g = this.glide, k = 1 - Math.exp(-dt * 4);
+      const c = this.screenToWorld(g.vw / 2, g.vh / 2);
+      const cx = c.x + (g.wx - c.x) * k, cy = c.y + (g.wy - c.y) * k;
+      this.scale *= Math.pow(g.scale / this.scale, k); this.targetScale = this.scale;
+      const done = Math.hypot(g.wx - cx, g.wy - cy) * this.scale < 0.25 && Math.abs(Math.log(g.scale / this.scale)) < 1e-3;
+      if (done) { this.scale = this.targetScale = g.scale; this.centerOn(g.wx, g.wy, g.vw, g.vh); this.glide = null; }
+      else this.centerOn(cx, cy, g.vw, g.vh);
+      return;
+    }
     if (this.targetScale !== this.scale) {
       const k = 1 - Math.exp(-dt * 12);
       this.scale += (this.targetScale - this.scale) * k;
