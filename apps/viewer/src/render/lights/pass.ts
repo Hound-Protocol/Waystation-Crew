@@ -8,6 +8,7 @@ import { pickLights } from "./pick";
 import { LightFade } from "./fade";
 import { FRAGMENT, VERTEX, MAX_LIGHTS, MAX_STEPS } from "./shader";
 import type { LightSource } from "./types";
+import { SupplyEase, EMERGENCY_COLOR } from "./supply";
 
 export interface LightBudget { maxLights: number; steps: number; shadows: boolean }
 
@@ -18,6 +19,7 @@ const byteTexture = (data: Uint8Array, w: number, h: number): BufferImageSource 
 export class LightPass {
   readonly filter: Filter;
   private readonly fade = new LightFade();
+  private readonly supply = new SupplyEase();
   private mapW = 1; private mapH = 1;
   private mask: BufferImageSource; private emis: BufferImageSource;
   private maskBytes = new Uint8Array(1); private doorsDirty = false;
@@ -59,6 +61,9 @@ export class LightPass {
     oldMask.destroy(); oldEmis.destroy();                         // a rebuild must not leave the previous textures on the GPU
   }
 
+  /** The grid's supply level (0..1): lamps dim in proportion and ease there; 0 is a blackout with dim red emergency lights. */
+  setSupply(level: number): void { this.supply.set(level); }
+
   /** Doors let light through as they open: call each frame with the eased open amounts (0..1); uploads only when something changed. */
   setDoors(doors: ReadonlyArray<{ x: number; y: number }>, open: ArrayLike<number>): void {
     if (!doors.length) return;
@@ -74,7 +79,10 @@ export class LightPass {
   update(dt: number, tx: number, ty: number, scale: number, viewW: number, viewH: number, res: number): void {
     this.fade.step(dt);
     const view = { x0: -tx / scale, y0: -ty / scale, x1: (viewW - tx) / scale, y1: (viewH - ty) / scale };
-    const live = this.fade.entries().filter((e) => e.f > 0).map((e) => (e.f === 1 ? e.light : { ...e.light, i: e.light.i * e.f }));   // fading lights carry their fade in their intensity
+    this.supply.step(dt);
+    const gain = this.supply.gain, em = this.supply.emergency, dim = gain !== 1 || em > 0.001;
+    const tinted = (c: LightSource["c"]): LightSource["c"] => (em > 0.001 ? [c[0] + (EMERGENCY_COLOR[0] - c[0]) * em, c[1] + (EMERGENCY_COLOR[1] - c[1]) * em, c[2] + (EMERGENCY_COLOR[2] - c[2]) * em] : c);
+    const live = this.fade.entries().filter((e) => e.f > 0).map((e) => (e.f === 1 && !dim ? e.light : { ...e.light, i: e.light.i * e.f * gain, c: tinted(e.light.c) }));   // fading lights carry their fade, and a power shortage its dimming, in their intensity
     this.active = pickLights(live, view, Math.min(this.budget.maxLights, this.cap));
     let n = 0;
     for (const l of this.active) {

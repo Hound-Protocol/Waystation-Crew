@@ -4,7 +4,10 @@ Usage: python3 e2e/light-parity.py"""
 import json, sys
 from playwright.sync_api import sync_playwright
 JS = """(async(settle)=>{const c=__wc.cam;c.zoomAt(640,300,40/c.scale);const out={};await new Promise(r=>setTimeout(r,settle));
-for(const n of [48,8,0]){__wc.lightPass.cap=n;await new Promise(r=>setTimeout(r,settle/2));const r=await __wc.lightProbe(200);out[n]=[r.bad,r.tot]}return out})"""
+for(const n of [48,8,0]){__wc.lightPass.cap=n;await new Promise(r=>setTimeout(r,settle/2));const r=await __wc.lightProbe(200);out[n]=[r.bad,r.tot]}
+__wc.lightPass.cap=Infinity;
+for(const [k,lvl] of [["supply0.5",0.5],["blackout",0]]){__wc.lightPass.setSupply(lvl);await new Promise(r=>setTimeout(r,settle));const r=await __wc.lightProbe(200);out[k]=[r.bad,r.tot]}
+__wc.lightPass.setSupply(1);return out})"""
 failed = False
 with sync_playwright() as pw:
     b = pw.chromium.launch(executable_path="/usr/bin/google-chrome", args=["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist", "--no-sandbox"])

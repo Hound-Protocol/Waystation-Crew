@@ -123,7 +123,7 @@ async function boot() {
         shipBody.pivot.set((sh.w * TILE) / 2, (sh.h * TILE) / 2); berth = sh.berth; shipBody.visible = true;
       }
       if (m.shipStatus) { shipSlip = m.shipStatus.slip; shipHolding = m.shipStatus.holding; shipAboard = m.shipStatus.aboard; }
-      mapW = m.w; mapH = m.h; crew = m.chars.length; tally.reset(m.chars); stats = m.stats ?? null; countFootprint(m.tiles);
+      mapW = m.w; mapH = m.h; crew = m.chars.length; tally.reset(m.chars); stats = m.stats ?? null; if (stats) lightPass.setSupply(stats.power.supplyLevel); countFootprint(m.tiles);
       chars.reset(m.chars); status.reset(m.chars); tracks.reset(m.chars); panel.setChars(m.chars); if (selected !== null) select(null);
       renderTick = latestTick = m.tick; clock.reset(m.tick, speed);
       if (!fitted) {
@@ -143,7 +143,7 @@ async function boot() {
       if (m.shipStatus) { shipSlip = m.shipStatus.slip; shipHolding = m.shipStatus.holding; shipAboard = m.shipStatus.aboard; }
       for (const tc of m.tasks ?? []) status.setTask(tc.id, tc.task);
       for (const sc of m.states) tally.setState(sc.id, sc.state);
-      if (m.stats) stats = m.stats;
+      if (m.stats) { stats = m.stats; lightPass.setSupply(stats.power.supplyLevel); }
       tracks.apply(m.moves); tracks.prune(m.tick - 120); latestTick = m.tick; speed = m.clock.speed; paused = m.clock.paused;
       panel.updateStates(m.states); panel.setClock(paused);
     } else if (m.id === selected) { panel.setInspect(m.lines); if (m.profile) pda.update(m.profile); }
