@@ -54,8 +54,8 @@ export const MOUNTS: Record<string, () => Img> = {
 const slotSquare = (): Img => { const im = new Img(), c = hex("#c8601a"); im.rect(2, 2, 13, 2, c); im.rect(2, 13, 13, 13, c); im.rect(2, 2, 2, 13, c); im.rect(13, 2, 13, 13, c); return im; };
 const OUTLINE = hex("#2a2d34"), HI = hex("#8e9aa3");
 export const DECALS: Record<string, () => Img> = {
-  // one continuous rear ramp: vertical grip bars across the direction of travel, no tile borders, period 8 divides 16 so tiles join seamlessly
-  "floor:ramp": () => { const im = new Img(); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) im.px(x, y, x % 8 < 4 ? hex("#c8601a") : hex("#241f1b")); return im; },
+  // one continuous rear ramp: a single diagonal hazard pattern, no tile borders; period 8 divides 16, so tiles join seamlessly in both directions
+  "floor:ramp": () => { const im = new Img(); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) im.px(x, y, (x + y) % 8 < 4 ? hex("#c8601a") : hex("#241f1b")); return im; },
   // cargo slots: every cell is the same closed square outline (the ship blueprint is rotated when stamped, so corner pieces would land wrong)
   "floor:slot-ml": () => slotSquare(), "floor:slot-mr": () => slotSquare(), "floor:slot-tl": () => slotSquare(),
   "floor:slot-tr": () => slotSquare(), "floor:slot-bl": () => slotSquare(), "floor:slot-br": () => slotSquare(),

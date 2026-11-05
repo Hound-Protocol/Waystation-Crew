@@ -30,3 +30,31 @@ describe("shipState: the docked ship's pre-departure routine (stand-in until rea
     for (let t = 0; t < CYCLE; t += 7) { const a = shipState(t), b = shipState(t + CYCLE * 3); expect(b).toEqual(a); for (const v of [a.bars, a.thrust, a.glow]) { expect(v).toBeGreaterThanOrEqual(0); expect(v).toBeLessThanOrEqual(1); } }
   });
 });
+
+describe("shipState: the heavy gateways", () => {
+  it("stay open the whole time the ship is docked, and shut only before departure", () => {
+    for (let t = 0; t < 1140; t += 10) expect(shipState(t)).toMatchObject({ gate: 1, gateMoving: false });
+    for (let t = 1200; t < 1500; t += 10) expect(shipState(t)).toMatchObject({ gate: 0, gateMoving: false });
+    for (let t = 1560; t < CYCLE; t += 10) expect(shipState(t)).toMatchObject({ gate: 1, gateMoving: false });
+  });
+  it("opens in three beats: a small crack, a pause, then a slow heavy swing", () => {
+    const g = (t: number) => shipState(t).gate;
+    expect(g(1500)).toBe(0);
+    expect(g(1504)).toBeGreaterThan(0); expect(g(1504)).toBeLessThan(0.1);               // cracking
+    expect(g(1515)).toBeCloseTo(0.1, 5); expect(g(1517)).toBeCloseTo(0.1, 5);            // pause at the crack
+    expect(g(1530)).toBeGreaterThan(0.2); expect(g(1530)).toBeLessThan(0.9);             // swinging
+    expect(g(1560)).toBe(1);
+    let prev = 0; for (let t = 1500; t <= 1560; t++) { expect(g(t)).toBeGreaterThanOrEqual(prev); prev = g(t); }
+    for (let t = 1500; t < 1560; t++) expect(shipState(t).gateMoving).toBe(true);
+  });
+  it("closes the same way in reverse, ending in a small crack that thuds shut", () => {
+    const g = (t: number) => shipState(t).gate;
+    expect(g(1140)).toBe(1); expect(g(1200)).toBe(0);
+    let prev = 1; for (let t = 1140; t <= 1200; t++) { expect(g(t)).toBeLessThanOrEqual(prev); prev = g(t); }
+    expect(g(1185)).toBeCloseTo(0.1, 5);                                                  // the pause before the final crack closes
+    for (let t = 1140; t < 1200; t++) expect(shipState(t).gateMoving).toBe(true);
+  });
+  it("is fully shut by the time the restraint bars start to lower", () => {
+    expect(shipState(1200).gate).toBe(0); expect(shipState(1201).bars).toBeGreaterThan(0);
+  });
+});

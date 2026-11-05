@@ -11,6 +11,12 @@ describe("shipFixtures: finds the animated parts in the baked station", () => {
     const mid = st.rooms.find((r) => r.name === "Cargo Ship")!.y + 17;
     for (const s of fx.seats) expect(s.dir).toBe(s.y < mid ? 1 : -1);               // north-wall seats face south, south-wall seats face north
   });
+  it("finds the nose canopy as one continuous 7-tile window, set into the hull wall", () => {
+    expect(fx.canopy.length).toBe(1);
+    const c = fx.canopy[0];
+    expect(Math.max(c.w, c.h)).toBe(7); expect(Math.min(c.w, c.h)).toBe(1);
+    for (let y = c.y; y < c.y + c.h; y++) for (let x = c.x; x < c.x + c.w; x++) expect(st.map.get(x, y)).toBe(TileKind.Wall);
+  });
   it("places four big external engines (5x2 tiles) outside the hull, two each side, all in open space with a free exhaust run", () => {
     expect(fx.thrusters.length).toBe(4);
     const ship = st.rooms.find((r) => r.name === "Cargo Ship")!;

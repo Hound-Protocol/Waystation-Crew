@@ -12,7 +12,26 @@ interface RoomLike { name: string; x: number; y: number; w: number; h: number }
 export const ENGINE_W = 5, ENGINE_H = 2;
 
 /** The animated parts of the docked ship: shoulder-bar seats (found in the baked deco) and four external engines stacked in pairs beside the stern, in open space. */
-export function shipFixtures(deco: DecoLike[], tileAt: (x: number, y: number) => TileKind, rooms: RoomLike[]): { seats: Seat[]; thrusters: Thruster[] } {
+export interface Canopy { x: number; y: number; w: number; h: number }
+export interface ShipFixtures { seats: Seat[]; thrusters: Thruster[]; canopy: Canopy[] }
+
+/** Runs of adjacent `wall:canopy` cells, each as one rectangle (the window is drawn as a single continuous pane). */
+function canopyRuns(deco: DecoLike[]): Canopy[] {
+  const cells = new Set(deco.filter((d) => d.sprite === "wall:canopy").map((d) => `${d.x},${d.y}`)), seen = new Set<string>(), out: Canopy[] = [];
+  for (const k of cells) {
+    if (seen.has(k)) continue;
+    let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1; const q = [k]; seen.add(k);
+    while (q.length) {
+      const [cx, cy] = q.pop()!.split(",").map(Number);
+      x0 = Math.min(x0, cx); x1 = Math.max(x1, cx); y0 = Math.min(y0, cy); y1 = Math.max(y1, cy);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = `${cx + dx},${cy + dy}`; if (cells.has(n) && !seen.has(n)) { seen.add(n); q.push(n); } }
+    }
+    out.push({ x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 });
+  }
+  return out;
+}
+
+export function shipFixtures(deco: DecoLike[], tileAt: (x: number, y: number) => TileKind, rooms: RoomLike[]): ShipFixtures {
   const seats: Seat[] = [], thrusters: Thruster[] = [];
   for (const d of deco) {
     if (d.sprite === "prop:jumpseat") seats.push({ x: d.x, y: d.y, dir: 1 });
@@ -29,7 +48,7 @@ export function shipFixtures(deco: DecoLike[], tileAt: (x: number, y: number) =>
       thrusters.push({ x, y, w: ENGINE_W, h: ENGINE_H, strut, run });
     }
   }
-  return { seats, thrusters };
+  return { seats, thrusters, canopy: canopyRuns(deco) };
 }
 
 const BAR = 0xe0741c, ARM = 0x8e9aa3, DARK = 0x14161a, GO = 0x7dffb0, WAIT = 0xffb02e;
@@ -37,14 +56,17 @@ const BAR = 0xe0741c, ARM = 0x8e9aa3, DARK = 0x14161a, GO = 0x7dffb0, WAIT = 0xf
 /** Animated parts of the docked ship: shoulder bars over the seats, nozzle heat and main-thruster plumes. Redraws only while something changes. */
 export class ShipLayer {
   readonly root = new Container();
+  private canopy = new Container();
   private bars = new Graphics();
   private seats: Seat[] = [];
   private jets: Array<{ box: Container; g: Graphics; t: Thruster }> = [];
   private lastBars = -1;
-  constructor() { this.root.addChild(this.bars); }
+  constructor() { this.root.addChild(this.canopy, this.bars); }
 
-  reset(fx: { seats: Seat[]; thrusters: Thruster[] }) {
+  reset(fx: ShipFixtures) {
     this.seats = fx.seats; this.lastBars = -1;
+    this.canopy.removeChildren().forEach((c) => c.destroy());
+    for (const c of fx.canopy) { const g = new Graphics(); drawCanopy(g, c); this.canopy.addChild(g); }
     for (const j of this.jets) j.box.destroy({ children: true });
     this.jets = fx.thrusters.map((t) => {
       const box = new Container(), body = new Graphics(), g = new Graphics();
@@ -113,4 +135,21 @@ function drawEngine(g: Graphics, strut: 1 | -1) {
   }
   for (const x of [61, 67, 73]) { R(x, 16 - Math.round(8 + (x - 56) * 0.28), x, 16 + Math.round(8 + (x - 56) * 0.28) - 1, DEEP); }  // reinforcing rings
   R(78, 16 - 10, 79, 16 + 9, OR); R(79, 16 - 10, 79, 16 + 9, OR_H);                                                              // glowing-hot rim
+}
+
+/**
+ * The nose canopy as one continuous, mostly transparent pane: a thin frame, two soft glare bands and a few instrument-reflection ticks.
+ * Everything else lets the stars through. Works for a run along either axis.
+ */
+function drawCanopy(g: Graphics, c: Canopy) {
+  const vertical = c.h >= c.w, L = (vertical ? c.h : c.w) * TILE, T = (vertical ? c.w : c.h) * TILE;
+  const R = (u0: number, v0: number, u1: number, v1: number, col: number, a: number) =>
+    (vertical ? g.rect(c.x * TILE + v0, c.y * TILE + u0, v1 - v0, u1 - u0) : g.rect(c.x * TILE + u0, c.y * TILE + v0, u1 - u0, v1 - v0)).fill({ color: col, alpha: a });
+  R(0, 0, L, T, 0x6cc6e6, 0.05);                                                      // faint glass tint
+  for (const [u, w, a] of [[L * 0.18, 5, 0.12], [L * 0.30, 2, 0.16], [L * 0.62, 7, 0.10]] as Array<[number, number, number]>)   // diagonal glare bands, one stroke each
+    for (let v = 0; v < T; v++) R(Math.round(u + v * 0.9), v, Math.round(u + v * 0.9) + w, v + 1, 0xcfefff, a);
+  R(0, 0, L, 1, 0x8e9aa3, 0.8); R(0, T - 1, L, T, 0x8e9aa3, 0.8);                      // thin frame rails along the long edges
+  R(0, 0, 2, T, 0x3a3f4a, 0.95); R(L - 2, 0, L, T, 0x3a3f4a, 0.95);                    // end posts
+  for (const u of [L * 0.33, L * 0.66]) R(Math.round(u), 0, Math.round(u) + 1, T, 0x3a3f4a, 0.55);   // slim mullions
+  for (const [u, v] of [[L * 0.2, T * 0.7], [L * 0.45, T * 0.3], [L * 0.8, T * 0.6]]) { R(Math.round(u), Math.round(v), Math.round(u) + 3, Math.round(v) + 1, 0x4de1ff, 0.55); R(Math.round(u) + 4, Math.round(v), Math.round(u) + 5, Math.round(v) + 1, 0xffb02e, 0.5); }   // HUD reflections
 }

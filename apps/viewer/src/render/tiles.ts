@@ -37,9 +37,11 @@ export function buildTileCanvas(inp: BakeInput): HTMLCanvasElement {
   const floorAt = (style: number, parity: number) => { const key = style * 2 + parity; let f = floorCache.get(key); if (!f) { f = drawFloor(style, parity); floorCache.set(key, f); } return f; };
   const at = (x: number, y: number) => (x < 0 || y < 0 || x >= w || y >= h ? 0 : tiles[y * w + x]);
 
+  // the nose canopy is one continuous transparent pane drawn by the ship layer: leave those cells empty here
+  const canopy = new Set((inp.deco ?? []).filter((d) => d.sprite === "wall:canopy").map((d) => d.y * w + d.x));
   for (let ty = 0; ty < h; ty++) for (let tx = 0; tx < w; tx++) {
     const k = tiles[ty * w + tx];
-    if (k === TileKind.Void) continue;
+    if (k === TileKind.Void || canopy.has(ty * w + tx)) continue;
     if (k === TileKind.Wall) {
       const m = { n: isWall(at(tx, ty - 1)), e: isWall(at(tx + 1, ty)), s: isWall(at(tx, ty + 1)), w: isWall(at(tx - 1, ty)), ne: isWall(at(tx + 1, ty - 1)), se: isWall(at(tx + 1, ty + 1)), sw: isWall(at(tx - 1, ty + 1)), nw: isWall(at(tx - 1, ty - 1)) };
       const key = maskKey(m); let im = wallCache.get(key); if (!im) { im = drawWallAuto(m); wallCache.set(key, im); }
@@ -53,7 +55,7 @@ export function buildTileCanvas(inp: BakeInput): HTMLCanvasElement {
   for (const d of inp.deco ?? []) if (d.layer === "floor") { const s = spriteFor(d.sprite); if (s) blit(s, d.x, d.y); }
   for (const d of inp.deco ?? []) if (d.layer === "prop") { const s = spriteFor(d.sprite); if (s) blit(s, d.x, d.y); addGlow(d.sprite, d.x, d.y); }
   for (const f of inp.furniture ?? []) { const s = spriteFor(f.style ?? DEFAULT_STYLE[f.kind] ?? ""); if (s) blit(f.facing !== undefined && f.facing !== 2 && f.kind !== TileKind.Plant ? rotateN(s, (f.facing + 2) % 4) : s, f.x, f.y); addGlow(f.style ?? DEFAULT_STYLE[f.kind] ?? "", f.x, f.y); }
-  for (const d of inp.deco ?? []) if (d.layer === "wall") { const s = spriteFor(d.sprite); if (s) blit(s, d.x, d.y); addGlow(d.sprite, d.x, d.y + 1); }
+  for (const d of inp.deco ?? []) if (d.layer === "wall" && d.sprite !== "wall:canopy") { const s = spriteFor(d.sprite); if (s) blit(s, d.x, d.y); addGlow(d.sprite, d.x, d.y + 1); }
   for (const r of rooms) lights.push({ x: (r.x + r.w / 2) * TILE, y: (r.y + r.h / 2) * TILE, r: Math.max(r.w, r.h) * TILE * 0.55, i: 0.5, c: [255, 170, 90] });
   // corridor and plaza lamps on a sparse grid
   if (inp.floors) for (let y = 3; y < h; y += 9) for (let x = 3; x < w; x += 9) { const st = inp.floors[y * w + x]; if (tiles[y * w + x] === TileKind.Floor && (st === 0 || st === 8)) lights.push({ x: x * TILE + 8, y: y * TILE + 8, r: 80, i: 0.6, c: [255, 190, 120] }); }

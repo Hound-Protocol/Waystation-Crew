@@ -81,13 +81,9 @@ describe("hazard stripe tiles", () => {
 });
 
 describe("rear ramp tile", () => {
-  it("is a borderless vertical-bar pattern that joins seamlessly with its neighbours", async () => {
+  it("is one diagonal hazard pattern with no tile borders: colour depends only on (x + y) mod 8, so every tile joins its neighbours seamlessly", async () => {
     const { DECALS } = await import("./mounts");
-    const im = DECALS["floor:ramp"]();
-    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
-      expect(key(px(im, x, y)), `${x},${y}`).toBe(key(px(im, x, 0)));                // identical down every column: no horizontal tile seams
-    }
-    expect(key(px(im, 0, 0))).not.toBe(key(px(im, 4, 0)));                             // bars alternate
-    expect(key(px(im, 0, 0))).toBe(key(px(im, 8, 0)));                                 // period 8: the right edge meets the next tile's left edge
+    const im = DECALS["floor:ramp"](), A = key({ r: 0xc8, g: 0x60, b: 0x1a }), B = key({ r: 0x24, g: 0x1f, b: 0x1b });
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) expect(key(px(im, x, y)), `${x},${y}`).toBe((x + y) % 8 < 4 ? A : B);
   });
 });

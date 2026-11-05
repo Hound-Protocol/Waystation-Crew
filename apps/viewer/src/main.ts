@@ -145,7 +145,8 @@ async function boot() {
     }
     markerA += ((selected !== null ? 1 : 0) - markerA) * (1 - Math.exp(-dt * 14));
     marker.alpha = markerA < 0.01 ? 0 : markerA;
-    gateLayer.update(dt, chars.ids.flatMap((id) => { const p = tracks.positionAt(id, renderTick); return p ? [p] : []; }));
+    const ship = shipDebug ?? shipState(renderTick);
+    gateLayer.update(performance.now() / 1000, ship);
     doorLayer.update(dt, chars.ids, (id) => tracks.positionAt(id, renderTick));
     chars.update(dt, renderTick, tracks, cam, app.screen.width, app.screen.height);
     const d = Math.floor((latestTick + 21600) / 86400) + 1, h = Math.floor(((latestTick / 3600) + 6) % 24), m = Math.floor((latestTick / 60) % 60);

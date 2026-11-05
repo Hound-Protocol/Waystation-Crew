@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildStarterStation, TileKind } from "@wc/sim-core";
-import { findGates, gateOpenTarget, GateModel } from "./gates";
+import { findGates, gateStrips, gateBeacons, strobe, beaconLevel } from "./gates";
 
 describe("gateways: runs of airlock cells become one big door", () => {
   const st = buildStarterStation(1);
@@ -16,20 +16,24 @@ describe("gateways: runs of airlock cells become one big door", () => {
     let cells = 0; for (const t of tiles) if (t === TileKind.Airlock) cells++;
     expect(gates.reduce((n, g) => n + g.w * g.h, 0)).toBe(cells);
   });
-  it("opens when someone is within 2 tiles of the gate rectangle, otherwise stays shut", () => {
-    const g = { x: 10, y: 10, w: 2, h: 9 };
-    expect(gateOpenTarget(g, [{ x: 13, y: 14 }])).toBe(1);
-    expect(gateOpenTarget(g, [{ x: 30, y: 14 }])).toBe(0);
-    expect(gateOpenTarget(g, [])).toBe(0);
+});
+
+describe("gateway lights", () => {
+  const stern = { x: 10, y: 20, w: 2, h: 9 }, side = { x: 5, y: 3, w: 2, h: 1 };
+  it("puts a strobe strip on the floor right in front of and right behind the door, across its full width", () => {
+    expect(gateStrips(stern)).toEqual([{ x: 9, y: 20, w: 1, h: 9 }, { x: 12, y: 20, w: 1, h: 9 }]);
+    expect(gateStrips(side)).toEqual([{ x: 5, y: 2, w: 2, h: 1 }, { x: 5, y: 4, w: 2, h: 1 }]);
   });
-  it("eases open quickly and closes slower", () => {
-    const m = new GateModel([{ x: 0, y: 0, w: 1, h: 2 }]);
-    m.update(0.2, [{ x: 1, y: 0 }]); const opening = m.open[0];
-    expect(opening).toBeGreaterThan(0.5);
-    for (let i = 0; i < 60; i++) m.update(0.05, [{ x: 1, y: 0 }]);
-    expect(m.open[0]).toBeGreaterThan(0.99);
-    m.update(0.2, []); expect(m.open[0]).toBeGreaterThan(0.3);
-    for (let i = 0; i < 200; i++) m.update(0.05, []);
-    expect(m.open[0]).toBe(0);
+  it("mounts yellow beacons on the wall at both ends of the door, one per cell across it", () => {
+    expect(gateBeacons(stern).map((b) => `${b.x},${b.y},${b.end}`).sort()).toEqual(["10,19,0", "10,29,1", "11,19,0", "11,29,1"]);
+    expect(gateBeacons(side).map((b) => `${b.x},${b.y},${b.end}`).sort()).toEqual(["4,3,0", "7,3,1"]);
+  });
+  it("strobes at 5 Hz, the front and rear strips taking turns", () => {
+    expect(strobe(0.05, 0)).toBe(true); expect(strobe(0.15, 0)).toBe(false); expect(strobe(0.25, 0)).toBe(true);
+    for (const t of [0.01, 0.12, 0.33, 0.77]) expect(strobe(t, 0)).not.toBe(strobe(t, 1));
+  });
+  it("flashes the two ends of the beacon bar alternately, always lit somewhere between 0 and 1", () => {
+    for (const t of [0, 0.1, 0.33, 0.5, 0.9]) { for (const e of [0, 1] as const) { const v = beaconLevel(t, e); expect(v).toBeGreaterThanOrEqual(0); expect(v).toBeLessThanOrEqual(1); } }
+    expect(beaconLevel(0.083, 0)).toBeGreaterThan(0.9); expect(beaconLevel(0.083, 1)).toBeLessThan(0.1);
   });
 });
