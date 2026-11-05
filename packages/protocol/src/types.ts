@@ -1,7 +1,7 @@
 export interface Point { x: number; y: number }
 export interface Viewport { x: number; y: number; w: number; h: number; zoom: number }
 export interface CharSnap { id: number; name: string; dept: number; rank: number; x: number; y: number; state: number; job: number }
-export interface FurnitureSnap { id: number; kind: number; x: number; y: number; roomId: number; style?: string }
+export interface FurnitureSnap { id: number; kind: number; x: number; y: number; roomId: number; style?: string; facing?: 0 | 1 | 2 | 3 }
 /** Visual-only decoration: floor markings, standing props and wall mounts. */
 export interface DecoSnap { x: number; y: number; sprite: string; layer: "floor" | "prop" | "wall" }
 export interface RoomSnap { id: number; name: string; x: number; y: number; w: number; h: number; kind?: string }

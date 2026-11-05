@@ -1,4 +1,5 @@
 import { Img } from "./image";
+import { rotateN } from "./transform";
 import { hex, mul, CYAN, ORANGE, GREENE, RED, LAMP, AMBER, ICE, SCR, VIO, WHT, LIME, type RGB } from "./palette";
 
 const BODY = hex("#1b1e24"), TOP = hex("#2d3139"), BLK = hex("#06090c"), SHD = hex("#0d0e12"), KEY = hex("#2a2e36");
@@ -66,5 +67,18 @@ export const PLANTS: Record<string, () => Img> = {
   "plant:hydro": () => { const im = new Img(); im.box(1, 5, 14, 13, hex("#242a30")); im.rect(2, 6, 13, 12, hex("#1a2420")); for (const x of [3, 6, 9, 12]) for (const y of [7, 10]) { im.px(x, y, GREENE); im.px(x, y + 1, hex("#1f7a4c")); im.px(x - 1, y, hex("#3fd98a")); } im.rect(1, 3, 14, 3, VIO); im.rect(1, 4, 14, 4, hex("#4a3a70")); im.rect(1, 14, 14, 14, SHD); return im; },
 };
 
-export const FURNITURE_SPRITES: Record<string, () => Img> = { ...CONSOLES, ...BEDS, ...TABLES, ...PLANTS };
+/** Office chair drawn facing south (back at the top, seat and armrests below); `chair:n` faces N/E/S/W = 0..3. */
+function chairSouth(): Img {
+  const im = new Img();
+  const FR = hex("#2a2d34"), SEAT = hex("#3d6a8a"), SEATHI = hex("#5b8fb2");
+  im.rect(5, 4, 10, 6, FR); im.rect(6, 5, 9, 5, mul(FR, 1.5));                 // backrest
+  im.rect(4, 7, 11, 11, FR); im.rect(5, 8, 10, 10, SEAT); im.rect(5, 8, 10, 8, SEATHI); // seat
+  im.rect(3, 7, 3, 10, hex("#1b1e24")); im.rect(12, 7, 12, 10, hex("#1b1e24"));     // armrests
+  im.rect(7, 12, 8, 12, hex("#4d5361")); im.px(5, 13, hex("#161a20")); im.px(10, 13, hex("#161a20")); im.px(7, 13, hex("#161a20"));
+  return im;
+}
+export const CHAIRS: Record<string, () => Img> = {};
+for (let n = 0; n < 4; n++) CHAIRS[`chair:${n}`] = () => rotateN(chairSouth(), (n + 2) % 4);
+
+export const FURNITURE_SPRITES: Record<string, () => Img> = { ...CONSOLES, ...BEDS, ...TABLES, ...PLANTS, ...CHAIRS };
 void WHT;

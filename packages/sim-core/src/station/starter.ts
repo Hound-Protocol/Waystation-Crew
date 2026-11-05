@@ -1,7 +1,8 @@
+import { FACING } from "./furnish";
 import { TileKind, createTilemap, isWalkable, type Point, type Tilemap } from "./tilemap";
 
 export interface Room { id: number; name: string; x: number; y: number; w: number; h: number; kind?: string; variant?: number }
-export interface Furniture { id: number; kind: TileKind; x: number; y: number; roomId: number; style?: string }
+export interface Furniture { id: number; kind: TileKind; x: number; y: number; roomId: number; style?: string; facing?: 0 | 1 | 2 | 3 }
 /** Purely visual: floor markings (walkable), standing props (solid, TileKind.Prop in the map) and wall mounts. */
 export interface Deco { x: number; y: number; sprite: string; layer: "floor" | "prop" | "wall" }
 export interface Station { map: Tilemap; rooms: Room[]; furniture: Furniture[]; deco?: Deco[]; floors?: Uint8Array; halls?: Array<{ x0: number; y0: number; x1: number; y1: number }> }
@@ -10,6 +11,7 @@ export interface Station { map: Tilemap; rooms: Room[]; furniture: Furniture[]; 
 export function interactionPoint(map: Tilemap, f: Furniture): Point | null {
   if (isWalkable(f.kind)) return { x: f.x, y: f.y };
   const open = (x: number, y: number) => isWalkable(map.get(x, y)) && map.get(x, y) !== TileKind.Door;
+  if (f.facing !== undefined && (f.kind === TileKind.Console || f.kind === TileKind.Table)) { const [fx, fy] = FACING[f.facing]; if (open(f.x + fx, f.y + fy)) return { x: f.x + fx, y: f.y + fy }; }
   let best: Point | null = null, bestScore = -1;
   for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]] as const) {
     const x = f.x + dx, y = f.y + dy;

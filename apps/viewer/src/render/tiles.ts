@@ -6,6 +6,7 @@ import { Img } from "./sprites/image";
 import { drawWallAuto, maskKey } from "./sprites/autowall";
 import { drawFloor } from "./sprites/floors";
 import { spriteFor, glowOf } from "./sprites/library";
+import { rotateN } from "./sprites/transform";
 import { bakeLighting, type Light } from "./light";
 
 export const TILE = 16;
@@ -50,7 +51,7 @@ export function buildTileCanvas(inp: BakeInput): HTMLCanvasElement {
   const addGlow = (name: string, x: number, y: number) => { const g = glowOf(name); if (g) lights.push({ x: x * TILE + 8, y: y * TILE + 8, r: g.r, i: g.i, c: g.c }); };
   for (const d of inp.deco ?? []) if (d.layer === "floor") { const s = spriteFor(d.sprite); if (s) blit(s, d.x, d.y); }
   for (const d of inp.deco ?? []) if (d.layer === "prop") { const s = spriteFor(d.sprite); if (s) blit(s, d.x, d.y); addGlow(d.sprite, d.x, d.y); }
-  for (const f of inp.furniture ?? []) { const s = spriteFor(f.style ?? DEFAULT_STYLE[f.kind] ?? ""); if (s) blit(s, f.x, f.y); addGlow(f.style ?? DEFAULT_STYLE[f.kind] ?? "", f.x, f.y); }
+  for (const f of inp.furniture ?? []) { const s = spriteFor(f.style ?? DEFAULT_STYLE[f.kind] ?? ""); if (s) blit(f.facing !== undefined && f.facing !== 2 && f.kind !== TileKind.Plant ? rotateN(s, (f.facing + 2) % 4) : s, f.x, f.y); addGlow(f.style ?? DEFAULT_STYLE[f.kind] ?? "", f.x, f.y); }
   for (const d of inp.deco ?? []) if (d.layer === "wall") { const s = spriteFor(d.sprite); if (s) blit(s, d.x, d.y); addGlow(d.sprite, d.x, d.y + 1); }
   for (const r of rooms) lights.push({ x: (r.x + r.w / 2) * TILE, y: (r.y + r.h / 2) * TILE, r: Math.max(r.w, r.h) * TILE * 0.55, i: 0.5, c: [255, 170, 90] });
   // corridor and plaza lamps on a sparse grid

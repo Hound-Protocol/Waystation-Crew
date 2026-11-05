@@ -10,3 +10,10 @@ export function rotate90(src: Img): Img {
   }
   return out;
 }
+
+/** n quarter turns clockwise (0..3). */
+export function rotateN(src: Img, n: number): Img {
+  let im = src;
+  for (let i = 0; i < ((n % 4) + 4) % 4; i++) im = rotate90(im);
+  return im;
+}
