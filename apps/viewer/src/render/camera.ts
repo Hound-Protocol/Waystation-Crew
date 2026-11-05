@@ -1,4 +1,4 @@
-export const MIN_SCALE = 1.5, MAX_SCALE = 64;
+export const MIN_SCALE = 0.012, MAX_SCALE = 64;
 
 /** screen = world * scale + (tx, ty); world units are tiles. */
 export class Camera {
@@ -52,6 +52,12 @@ export class Camera {
   fit(mapW: number, mapH: number, viewW: number, viewH: number) {
     this.scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, Math.min(viewW / mapW, viewH / mapH) * 0.95));
     this.centerOn(mapW / 2, mapH / 2, viewW, viewH);
+  }
+  /** keep the view inside a rectangle of world tiles (the whole solar system) */
+  clampRect(x: number, y: number, w: number, h: number, viewW: number, viewH: number) {
+    const m = 4 * this.scale;
+    this.tx = Math.min(viewW - m - x * this.scale, Math.max(m - (x + w) * this.scale, this.tx));
+    this.ty = Math.min(viewH - m - y * this.scale, Math.max(m - (y + h) * this.scale, this.ty));
   }
   /** keep at least a margin of the map on screen */
   clamp(mapW: number, mapH: number, viewW: number, viewH: number) {

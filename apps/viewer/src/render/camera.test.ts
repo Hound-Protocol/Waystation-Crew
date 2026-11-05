@@ -10,10 +10,10 @@ describe("Camera", () => {
     expect(after.x).toBeCloseTo(before.x); expect(after.y).toBeCloseTo(before.y);
     expect(c.scale).toBeCloseTo(20);
   });
-  it("clamps scale to 1.5..64", () => {
+  it("clamps scale to 0.012..64", () => {
     const c = new Camera(10);
     c.zoomAt(0, 0, 1000); expect(c.scale).toBe(64);
-    c.zoomAt(0, 0, 1e-9); expect(c.scale).toBe(1.5);
+    c.zoomAt(0, 0, 1e-9); expect(c.scale).toBe(0.012);
   });
   it("pan moves by screen pixels", () => {
     const c = new Camera(10);

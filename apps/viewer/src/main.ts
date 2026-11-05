@@ -10,6 +10,8 @@ import { zoomLevel } from "./render/lod";
 import { ClockSync } from "./render/clock";
 import { DoorLayer } from "./render/doors";
 import { doorIsVertical } from "./render/sprites/orient";
+import { SolarLayer } from "./render/space/solar";
+import { SYSTEM_EXTENT } from "./render/space/system";
 import { SpaceLayer } from "./render/space/layer";
 
 const BUILD = (import.meta as unknown as { env: Record<string, string> }).env.VITE_BUILD?.slice(0, 7) ?? "dev";
@@ -29,7 +31,8 @@ async function boot() {
   const chars = new CharLayer();
   const texs = characterTextures();
   const doorLayer = new DoorLayer(texs);
-  world.addChild(mapLayer, doorLayer.root, chars.root);
+  const solar = new SolarLayer();
+  world.addChild(solar.root, mapLayer, doorLayer.root, chars.root);
   const space = new SpaceLayer();
   app.stage.addChild(space.root, world);
   world.alpha = 0; // fades in with the first snapshot
@@ -112,7 +115,7 @@ async function boot() {
     renderTick = clock.update(dt, latestTick, speed, paused);
     cam.update(dt);
     if (follow && selected !== null) { const p = tracks.positionAt(selected, renderTick); if (p) cam.followToward(p.x + 0.5, p.y + 0.5, app.screen.width, app.screen.height, dt); }
-    cam.clamp(mapW, mapH, app.screen.width, app.screen.height);
+    cam.clampRect(mapW / 2 - SYSTEM_EXTENT, mapH / 2 - SYSTEM_EXTENT, SYSTEM_EXTENT * 2, SYSTEM_EXTENT * 2, app.screen.width, app.screen.height);
     for (let i = fades.length - 1; i >= 0; i--) {
       const f = fades[i]; f.alpha = Math.min(1, f.alpha + dt / 1.2);
       if (f.alpha >= 1) { for (const o of mapLayer.children.slice(0, -1)) if (o !== f) o.destroy(); fades.splice(i, 1); }
@@ -120,6 +123,7 @@ async function boot() {
     if (fitted) worldA = Math.min(1, worldA + dt / 0.7);
     world.alpha = worldA * worldA * (3 - 2 * worldA);
     world.scale.set(cam.scale / TILE); world.position.set(cam.tx, cam.ty);
+    solar.update(dt, renderTick, cam.scale);
     space.update(dt, cam.tx, cam.ty, app.screen.width, app.screen.height);
     if (selected !== null) {
       const p = tracks.positionAt(selected, renderTick);
