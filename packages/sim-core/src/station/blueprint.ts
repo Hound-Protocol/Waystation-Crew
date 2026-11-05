@@ -27,6 +27,9 @@ export const GLYPHS: Record<string, GlyphDef & { prefix?: string }> = {
   p: { tile: TileKind.Prop, sprite: "prop:printer" }, l: { tile: TileKind.Prop, sprite: "prop:lathe" }, v: { tile: TileKind.Prop, sprite: "prop:valve" },
   y: { tile: TileKind.Prop, sprite: "prop:suitrack" }, j: { tile: TileKind.Prop, sprite: "prop:scales" }, "$": { tile: TileKind.Prop, sprite: "prop:coolant" },
   "#": { tile: TileKind.Wall },
+  // ship deck
+  "~": { tile: TileKind.Prop, sprite: "prop:jumpseat" },
+  ",": { tile: TileKind.Floor, sprite: "floor:ramp", layer: "floor" }, ";": { tile: TileKind.Floor, sprite: "floor:slot", layer: "floor" },
   o: { tile: TileKind.Floor, sprite: "floor:stool", layer: "floor" }, r: { tile: TileKind.Floor, sprite: "floor:rug", layer: "floor" },
   h: { tile: TileKind.Floor, sprite: "floor:hazard", layer: "floor" }, "=": { tile: TileKind.Floor, sprite: "floor:lane", layer: "floor" },
   "^": { tile: TileKind.Floor, sprite: "floor:arrow", layer: "floor" }, "+": { tile: TileKind.Floor, sprite: "floor:medcross", layer: "floor" },

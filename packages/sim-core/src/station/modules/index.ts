@@ -8,10 +8,10 @@ export { MODULE_KINDS, type ModuleKind } from "../kit";
 /** Room name per kind; org/jobs.ts maps room names to departments. */
 export const ROOM_NAME: Record<ModuleKind, string> = {
   arrivals: "Arrivals", command: "Bridge", medical: "Medbay", security: "Security",
-  engineering: "Engineering", supply: "Cargo", galley: "Galley", habitation: "Habitation",
+  engineering: "Engineering", supply: "Cargo", galley: "Galley", habitation: "Habitation", ship: "Cargo Ship",
 };
 /** Floor style per module kind (see viewer floors): 0 plating, 1 clinical, 2 command carpet, 3 grating, 4 security, 5 galley, 6 cargo, 7 arrivals, 8 plaza, 9 quarters. */
-export const FLOOR_STYLE: Record<ModuleKind, number> = { arrivals: 7, command: 2, medical: 1, security: 4, engineering: 3, supply: 6, galley: 5, habitation: 9 };
+export const FLOOR_STYLE: Record<ModuleKind, number> = { arrivals: 7, command: 2, medical: 1, security: 4, engineering: 3, supply: 6, galley: 5, habitation: 9, ship: 10 };
 /** Wall-mounted decoration per module kind, picked per wall tile. */
 export const MOUNTS: Record<ModuleKind | "corridor", string[]> = {
   arrivals: ["wall:screen-board", "wall:sign-arrivals", "wall:clock", "wall:poster", "wall:light"],
@@ -22,6 +22,7 @@ export const MOUNTS: Record<ModuleKind | "corridor", string[]> = {
   supply: ["wall:screen-manifest", "wall:sign-cargo", "wall:vent", "wall:notice", "wall:light"],
   galley: ["wall:menu", "wall:clock", "wall:screen-news", "wall:poster", "wall:light"],
   habitation: ["wall:poster", "wall:screen-news", "wall:vent", "wall:notice", "wall:light"],
+  ship: ["wall:light", "wall:sign-cargo", "wall:vent", "wall:panel"],
   corridor: ["wall:light", "wall:vent", "wall:sign-arrow", "wall:extinguisher", "wall:panel", "wall:light"],
 };
 

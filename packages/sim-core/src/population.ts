@@ -9,6 +9,7 @@ import { TileKind } from "./station/tilemap";
 const MIX: Array<[Department, number]> = [
   [Department.Command, 3], [Department.Engineering, 12], [Department.Medical, 8],
   [Department.Security, 8], [Department.Supply, 10], [Department.Service, 19],
+  [Department.Flight, 2],
 ];
 
 function dockingSpot(world: World): { x: number; y: number } {

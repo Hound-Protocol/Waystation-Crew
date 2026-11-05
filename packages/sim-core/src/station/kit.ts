@@ -1,8 +1,8 @@
 import { Canvas, Shapes, type Blueprint } from "./blueprint";
 import type { Rng } from "../rng";
 
-export type ModuleKind = "arrivals" | "command" | "medical" | "security" | "engineering" | "supply" | "galley" | "habitation";
-export const MODULE_KINDS: ModuleKind[] = ["arrivals", "command", "medical", "security", "engineering", "supply", "galley", "habitation"];
+export type ModuleKind = "arrivals" | "command" | "medical" | "security" | "engineering" | "supply" | "galley" | "habitation" | "ship";
+export const MODULE_KINDS: ModuleKind[] = ["arrivals", "command", "medical", "security", "engineering", "supply", "galley", "habitation"];                       // "ship" is placed by the dock, never grown by demand
 
 /**
  * The room kit. Each room type is a generator: sizes and layout vary with the rng, so every room comes out unique.
@@ -17,6 +17,8 @@ const box = (rng: Rng, w: number, h: number) => (rng.int(0, 2) === 0 ? rect(w, h
 export const ROOM_TYPES: RoomType[] = [
   // ---- arrivals ----
   { id: "arrivals_hall", kind: "arrivals", make: (r) => { const w = R(r, 15, 19), h = R(r, 9, 11), c = box(r, w, h).airlocks(3, w - 4).hline(2, w - 3, 2, "k", 4).hline(2, w - 3, 5, "Q", 4).put(w >> 1, 4, "*").sym("N", [0, 1]).sym("P", [1, h - 3]).sym("V", [0, h - 4]); return c.done(); } },
+  // ---- the cargo ship: one deck, nose at the top, rear ramp at the bottom (see the logistics spec) ----
+  { id: "ship_deck", kind: "ship", make: () => shipDeck() },
   // ---- habitation ----
   { id: "cabin", kind: "habitation", make: (r) => { const w = R(r, 5, 7), h = R(r, 5, 6), c = box(r, w, h).hline(1, w - 2, 1, "B", 2).put(0, 0, "L").put(w - 1, 0, "P"); if (r.int(0, 1)) c.put(w - 1, 3, "N"); return c.done(); } },
   { id: "bunkroom", kind: "habitation", make: (r) => { const w = R(r, 9, 11), h = R(r, 7, 9), c = box(r, w, h).hline(1, w - 2, 1, "B", 2).hline(1, w - 2, 3, "B", 2); if (h >= 8) c.hline(1, w - 2, 5, "B", 2); c.put(0, 0, "L").put(w - 1, 0, "L").put(0, h - 2, "P"); return c.done(); } },
@@ -48,6 +50,22 @@ export const ROOM_TYPES: RoomType[] = [
   { id: "pantry", kind: "galley", make: (r) => { const w = R(r, 6, 8), h = R(r, 5, 6), c = box(r, w, h).hline(0, w - 1, 0, "F", 2).put(w >> 1, 2, "T").put(0, 3, "S").put(w - 1, 3, "%"); return c.done(); } },
 ];
 
+/** The balanced hauler: 21 wide x 34 long. Cockpit, side doors, 16 jump seats, a 12-crate hold, 9-wide rear ramp. */
+function shipDeck(): Blueprint {
+  const W = 21, H = 34;
+  const hw = (y: number) => (y < 7 ? 4 + y * 1.1 : y >= 30 ? 10.5 - (y - 29) * 1.4 : 10.5);
+  const c = new Canvas(W, H, (x, y) => Math.abs(x + 0.5 - W / 2) <= hw(y));
+  c.pts("n", [7, 1], [13, 1]).put(10, 1, "C");                                      // nav + pilot consoles at the nose
+  for (const y of [11, 12, 13, 14]) c.fill(1, y, 2, y, "~").fill(18, y, 19, y, "~");  // jump seats along both walls (16)
+  for (const y of [18, 21, 24]) for (const x of [4, 8, 12, 16]) c.put(x, y, ";");   // crate slots (12)
+  for (const y of [31, 32, 33]) c.fill(6, y, 14, y, ",");                            // rear ramp
+  const bp = c.done();
+  const g = bp.grid.map((r) => r.split(""));
+  for (const y of [8, 9]) { g[y + 1][0] = "A"; g[y + 1][W + 1] = "A"; }               // side boarding doors
+  for (let x = 6; x <= 14; x++) if (g[H + 1][x + 1] !== "d") g[H + 1][x + 1] = "A";   // stern airlocks line up with the dock
+  return { ...bp, grid: g.map((r) => r.join("")) };
+}
+
 /** Wing recipes: the order rooms are added to a department as it grows (cycled). */
 export const WINGS: Record<ModuleKind, string[]> = {
   arrivals: ["arrivals_hall"],
@@ -57,6 +75,7 @@ export const WINGS: Record<ModuleKind, string[]> = {
   engineering: ["engine", "workshop", "atmos", "workshop"],
   supply: ["cargo_bay", "storage", "cargo_office", "storage"],
   galley: ["mess", "kitchen", "pantry", "mess"],
+  ship: [],
   habitation: ["bunkroom", "bunkroom", "cabin", "bunkroom", "lounge", "bunkroom"],
 };
 

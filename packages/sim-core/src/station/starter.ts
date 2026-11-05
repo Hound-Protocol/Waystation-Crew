@@ -1,7 +1,7 @@
 import { FACING } from "./furnish";
 import { TileKind, createTilemap, isWalkable, type Point, type Tilemap } from "./tilemap";
 
-export interface Room { id: number; name: string; x: number; y: number; w: number; h: number; kind?: string; variant?: number }
+export interface Room { id: number; name: string; x: number; y: number; w: number; h: number; kind?: string; variant?: number; dockDone?: boolean }
 export interface Furniture { id: number; kind: TileKind; x: number; y: number; roomId: number; style?: string; facing?: 0 | 1 | 2 | 3 }
 /** Purely visual: floor markings (walkable), standing props (solid, TileKind.Prop in the map) and wall mounts. */
 export interface Deco { x: number; y: number; sprite: string; layer: "floor" | "prop" | "wall" }

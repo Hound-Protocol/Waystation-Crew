@@ -2,6 +2,7 @@ import { TileKind, createTilemap } from "./tilemap";
 import { createRng, type Rng } from "../rng";
 import { MOUNTS, type ModuleKind } from "./modules";
 import { buildRoom, carveHall, sealHull } from "./planner";
+import { buildDock } from "./dock";
 import { furnishRoom } from "./furnish";
 import { nextBuild } from "./demand";
 import { HUB, PLAZA_R, STATION_H, STATION_W } from "./constants";
@@ -17,6 +18,7 @@ export const STARTER_CREW = 100;
 export function growStation(st: Station, pop: number, rng: Rng): Room | null {
   const kind: ModuleKind | null = nextBuild(st, pop);
   if (!kind) return null;
+  if (kind === "arrivals") { const hall = buildDock(st, rng); if (hall) { for (const r of st.rooms) if (!r.dockDone) { r.dockDone = true; furnishRoom(st, r); addWallMounts(st, r, rng); } return hall; } }
   const room = buildRoom(st, kind, rng);
   if (room) { furnishRoom(st, room); addWallMounts(st, room, rng); }
   return room;

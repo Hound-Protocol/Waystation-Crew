@@ -93,7 +93,7 @@ describe("starter station", () => {
     expect(touching.length).toBeGreaterThanOrEqual(st.rooms.length - 2);
   });
   it("is compact: every module within 60 tiles of the plaza and streets stay bounded", () => {
-    for (const r of st.rooms) expect(Math.hypot(r.x + r.w / 2 - HUB.x, r.y + r.h / 2 - HUB.y), r.name).toBeLessThan(60);
+    for (const r of st.rooms.filter((q) => q.name !== "Cargo Ship")) expect(Math.hypot(r.x + r.w / 2 - HUB.x, r.y + r.h / 2 - HUB.y), r.name).toBeLessThan(60);   // the docked ship lies beyond Arrivals
     let corridor = 0;
     for (let i = 0; i < st.map.tiles.length; i++) if (st.map.tiles[i] === TileKind.Floor && st.floors![i] === 0) corridor++;
     expect(corridor).toBeLessThan(1400);

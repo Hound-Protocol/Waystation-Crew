@@ -1,7 +1,7 @@
 import { Img } from "./image";
 import { hex, type RGB } from "./palette";
 
-/** Floor styles by module: 0 plating, 1 clinical, 2 command carpet, 3 grating, 4 security, 5 galley, 6 cargo, 7 arrivals, 8 plaza, 9 quarters. */
+/** Floor styles by module: 0 plating, 1 clinical, 2 command carpet, 3 grating, 4 security, 5 galley, 6 cargo, 7 arrivals, 8 plaza, 9 quarters, 10 ship deck. */
 export const FLOOR_STYLES = 10;
 
 function base(im: Img, main: RGB, line: RGB, hi: RGB, parity: number) {
@@ -48,6 +48,9 @@ export function drawFloor(style: number, parity: number): Img {
       im.rect(0, 0, 15, 15, hex(parity ? "#2a2f3a" : "#2d3340"));
       for (let y = 2; y < 16; y += 4) for (let x = (y / 2) & 3; x < 16; x += 4) im.px(x, y, hex("#242933"));
       im.rect(0, 0, 15, 0, hex("#363d4c")); break; }
+    case 10: { // cargo ship deck: dark plates, orange trim line
+      base(im, hex("#2b2622"), hex("#1c1815"), hex("#37302a"), parity);
+      im.rect(0, 14, 15, 14, hex("#a8501a")); if (parity) im.rect(2, 7, 4, 7, hex("#7a3a12")); break; }
     default: base(im, hex("#22252c"), hex("#17191e"), hex("#292d35"), parity);
   }
   return im;

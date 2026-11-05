@@ -24,6 +24,9 @@ const SUITS: Record<number, Suit> = {
     extra: (im) => im.rect(5, 2, 10, 2, hex("#26282d")) },
   [Department.Supply]: { suit: hex("#4a4232"), hi: hex("#5e5441"), dk: hex("#2f2a20"), pad: hex("#8a7a3a"), light: LAMP,
     pants: PANTS, pantsHi: PANTS_HI, pantsDk: PANTS_DK, extra: (im) => { im.px(7, 2, LAMP); im.px(8, 2, LAMP); } },
+  // Flight: deep teal with orange shoulder boards
+  [Department.Flight]: { suit: hex("#1f6f78"), hi: hex("#2a8a95"), dk: hex("#134850"), pad: hex("#e0741c"), light: LAMP,
+    pants: hex("#17565d"), pantsHi: hex("#1f6f78"), pantsDk: hex("#0f3a40") },
   [Department.Service]: { suit: hex("#3d5a6c"), hi: hex("#4e7288"), dk: hex("#27394a"), pad: hex("#7a95a6"), light: GREENE,
     pants: PANTS, pantsHi: PANTS_HI, pantsDk: PANTS_DK },
 };

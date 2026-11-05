@@ -47,6 +47,8 @@ export const MOUNTS: Record<string, () => Img> = {
 
 const OUTLINE = hex("#2a2d34"), HI = hex("#8e9aa3");
 export const DECALS: Record<string, () => Img> = {
+  "floor:ramp": () => { const im = new Img(); im.rect(0, 0, 15, 15, hex("#241f1b")); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (((x + y) >> 2) % 2 === 0) im.px(x, y, hex("#c8601a")); im.rect(0, 0, 15, 0, hex("#06090c")); im.rect(0, 15, 15, 15, hex("#06090c")); return im; },
+  "floor:slot": () => { const im = new Img(); const c = hex("#c8601a"); for (const [x, y] of [[2, 2], [3, 2], [2, 3], [12, 2], [13, 2], [13, 3], [2, 12], [2, 13], [3, 13], [13, 12], [12, 13], [13, 13]]) im.px(x, y, c); return im; },
   "floor:stool": () => { const im = new Img(); im.rect(5, 6, 10, 11, hex("#2a2d34")); im.rect(6, 5, 9, 12, hex("#2a2d34")); im.rect(6, 6, 9, 10, hex("#6d7580")); im.rect(6, 6, 9, 6, HI); im.rect(6, 12, 9, 12, hex("#0d0e12")); return im; },
   "floor:rug": () => { const im = new Img(); im.rect(0, 0, 15, 15, hex("#3a2a44")); im.rect(1, 1, 14, 14, hex("#52385e")); im.rect(3, 3, 12, 12, hex("#3a2a44")); im.rect(5, 5, 10, 10, hex("#7a4a8a")); return im; },
   "floor:hazard": () => { const im = new Img(); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (x < 2 || x > 13 || y < 2 || y > 13) im.px(x, y, (x + y) % 6 < 3 ? hex("#b8941f") : hex("#15171b")); return im; },

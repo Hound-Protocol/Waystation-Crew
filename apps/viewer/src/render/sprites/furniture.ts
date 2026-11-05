@@ -26,6 +26,7 @@ export const CONSOLES: Record<string, () => Img> = {
   "console:galley": () => desk((im) => { im.rect(4, 7, 11, 9, hex("#0c2418")); lines(im, GREENE, [7, 9], 4, 9); im.px(10, 8, LAMP); im.px(11, 8, LAMP); }),
   "console:arrivals": () => desk((im) => { im.rect(4, 7, 11, 9, hex("#0b2a4a")); for (const [x, y] of [[6, 8], [7, 9], [8, 8], [9, 7]]) im.px(x, y, ICE); }),
   "console:habitation": () => desk((im) => { im.rect(4, 7, 11, 9, hex("#0b2a4a")); lines(im, SCR, [8], 4, 11); }),
+  "console:ship": () => desk((im) => { im.rect(4, 7, 11, 9, hex("#2a1606")); for (const [x, y] of [[5, 8], [7, 7], [9, 9], [11, 8]]) im.px(x, y, ORANGE); lines(im, AMBER, [9], 4, 8); im.rect(1, 5, 14, 5, hex("#c8601a")); }),
   "console:medical": () => CONSOLES["console:med"](),
   "console:security": () => CONSOLES["console:sec"](),
   "console:engineering": () => CONSOLES["console:eng"](),

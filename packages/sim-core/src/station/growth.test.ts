@@ -1,3 +1,4 @@
+import { HUB } from "./starter";
 import { describe, it, expect } from "vitest";
 import { createWorld, step, stepMany } from "../world";
 import { seedPopulation } from "../population";
@@ -31,9 +32,7 @@ describe("modular growth", () => {
     st.furniture.forEach((f, i) => { expect(f.id).toBe(i); });
     expect(beds(st)).toBeGreaterThanOrEqual(Math.ceil(300 * 1.1) - 20);
     expect(st.rooms.length).toBeGreaterThan(before.rooms + 15);
-    const arrivals = st.rooms.find((r) => r.name === "Arrivals")!;
-    let start = { x: 0, y: 0 };
-    for (let y = arrivals.y; y < arrivals.y + arrivals.h; y++) for (let x = arrivals.x; x < arrivals.x + arrivals.w; x++) if (st.map.get(x, y) === TileKind.Floor) start = { x, y };
+    const start = { x: HUB.x, y: HUB.y + 3 };                                  // the plaza
     for (const f of st.furniture) { const ip = interactionPoint(st.map, f); expect(ip, `${f.style}@${f.x},${f.y}`).not.toBeNull(); expect(findPath(st.map, start, ip!), `${f.style}@${f.x},${f.y}`).not.toBeNull(); }
     for (const r of st.rooms) expect(r.x >= 0 && r.y >= 0 && r.x + r.w <= st.map.w && r.y + r.h <= st.map.h).toBe(true);
   });

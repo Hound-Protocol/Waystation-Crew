@@ -1,6 +1,6 @@
 import type { ClientMsg, CharSnap } from "@wc/protocol";
 
-const DEPTS = ["Command", "Engineering", "Medical", "Security", "Supply", "Service"];
+const DEPTS = ["Command", "Engineering", "Medical", "Security", "Supply", "Service", "Flight"];
 const STATES = ["idle", "walking", "eating", "sleeping", "relaxing", "working"];
 
 export interface DevPanelOpts { send: (m: ClientMsg) => void; onSelect: (id: number) => void }
