@@ -35,8 +35,8 @@ describe("who may enter the ship", () => {
   });
   it("does not open for boarding while the gate is still swinging open after docking", () => {
     const arrive = firstTick((x) => x > 2000 && shipPhase(x).phase === "docked");
-    w.tick = arrive + 10; expect(shipBoardable(w)).toBe(false);
-    w.tick = arrive + 61; expect(shipBoardable(w)).toBe(true);
+    w.tick = arrive + 2; expect(shipBoardable(w)).toBe(false);
+    w.tick = arrive + 6; expect(shipBoardable(w)).toBe(true);
   });
   it("traps whoever is aboard while the ship is away, but lets them leave when docked", () => {
     expect(inShip(w, cockpit.x, cockpit.y)).toBe(true); expect(inShip(w, gateOut.x, gateOut.y)).toBe(false);

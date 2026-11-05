@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { shipPose, gateProfile } from "./pose";
+import { shipPose, gateProfile, GATE_TICKS } from "./pose";
 import { shipPhase, CYCLE } from "./timeline";
 
 const range = (a: number, b: number) => Array.from({ length: b - a }, (_, i) => a + i);
@@ -61,27 +61,33 @@ describe("ship pose: bars, engines, gates", () => {
   it("keeps the station gateway open while docked, shuts it before departure, and keeps it shut while away", () => {
     for (let t = 0; t < 400; t += 10) expect(shipPose(t).stationGate).toEqual({ v: 1, moving: false });
     const close = first((t) => shipPhase(t).phase === "gate-closing");
-    expect(shipPose(close).stationGate.v).toBe(1); expect(shipPose(close + 59).stationGate.v).toBeLessThan(0.2);
-    for (let t = close + 60; t < arrive; t += 7) expect(shipPose(t).stationGate, `t=${t}`).toEqual({ v: 0, moving: false });
-    expect(shipPose(arrive).stationGate.moving).toBe(true); expect(shipPose(arrive + 60).stationGate).toEqual({ v: 1, moving: false });
+    expect(shipPose(close).stationGate.v).toBe(1); expect(shipPose(close + 4).stationGate.v).toBeLessThan(0.2);
+    for (let t = close + 5; t < arrive; t += 7) expect(shipPose(t).stationGate, `t=${t}`).toEqual({ v: 0, moving: false });
+    expect(shipPose(arrive).stationGate.moving).toBe(true); expect(shipPose(arrive + 5).stationGate).toEqual({ v: 1, moving: false });
   });
   it("opens the pad stub gate on landing, holds it open through the wait, and shuts it only for the next departure", () => {
     for (let t = 0; t < landing; t += 11) expect(shipPose(t).padGate).toEqual({ v: 0, moving: false });
     expect(shipPose(landing).padGate.moving).toBe(true);
-    expect(shipPose(landing + 60).padGate).toEqual({ v: 1, moving: false });
+    expect(shipPose(landing + 5).padGate).toEqual({ v: 1, moving: false });
     const padClose = first((t) => shipPhase(t).phase === "gate-closing", landing);
     expect(padClose).toBe(landing + 300);
-    expect(shipPose(padClose + 59).padGate.v).toBeLessThan(0.2);
-    expect(shipPose(padClose + 60).padGate).toEqual({ v: 0, moving: false });
+    expect(shipPose(padClose + 4).padGate.v).toBeLessThan(0.2);
+    expect(shipPose(padClose + 5).padGate).toEqual({ v: 0, moving: false });
   });
-  it("opens in three beats: a small crack, a pause, then a slow heavy swing", () => {
-    const g = (t: number) => shipPose(t).padGate.v;
-    expect(g(landing)).toBe(0);
-    expect(g(landing + 4)).toBeGreaterThan(0); expect(g(landing + 4)).toBeLessThan(0.1);
-    expect(g(landing + 15)).toBeCloseTo(0.1, 5); expect(g(landing + 17)).toBeCloseTo(0.1, 5);
-    expect(g(landing + 30)).toBeGreaterThan(0.2); expect(g(landing + 30)).toBeLessThan(0.9);
-    let prev = 0; for (let t = landing; t <= landing + 60; t++) { expect(g(t)).toBeGreaterThanOrEqual(prev); prev = g(t); }
+  it("opens in five seconds: a fast bouncy crack and a pause in the first two, then a three-second swing", () => {
+    expect(GATE_TICKS).toBe(5);
+    const v = (sec: number) => gateProfile(sec / 5);
+    expect(v(0)).toBe(0);
+    let peak = 0; for (let t = 0; t <= 2; t += 0.02) peak = Math.max(peak, v(t));
+    expect(peak).toBeGreaterThan(0.12 * 1.1);                     // overshoots the crack: the bounce
+    expect(v(0.3)).toBeGreaterThan(0.08);                          // and it is quick
+    expect(v(1.6)).toBeCloseTo(0.12, 2); expect(v(2)).toBeCloseTo(0.12, 2); // settled: the pause
+    expect(v(3)).toBeGreaterThan(0.2); expect(v(3)).toBeLessThan(0.9);
+    let prev = v(2); for (let t = 2; t <= 5; t += 0.05) { expect(v(t)).toBeGreaterThanOrEqual(prev - 1e-9); prev = v(t); }
     expect(gateProfile(1)).toBeCloseTo(1, 9);
+    const g = (t: number) => shipPose(t).padGate.v;                // and the pose uses it over the first 5 ticks of landing
+    expect(g(landing)).toBe(0); expect(g(landing + 5)).toBe(1);
+    expect(g(landing + 1)).toBeGreaterThan(0.05);
   });
   it("is the same every cycle", () => { for (const t of all.filter((x) => x % 17 === 0)) expect(shipPose(t + 4 * CYCLE)).toEqual(shipPose(t)); });
 });

@@ -55,3 +55,6 @@ Passenger boarding and cargo (slice 4), call-a-ship button and any manual trigge
 - Staffing: `FLIGHT_CREW = 6`, forced into the first six seeded characters; `take()` spreads Flight crew by shift fill (pilot and co-pilot before engineer); nobody else gets Flight posts.
 - Cockpit seats by console y: lowest = co-pilot, middle = pilot, highest = engineer.
 - Visual check: crew sit upright at their consoles in the rotated body mid-flight; at low zoom they draw as dots.
+
+## Gates: 5 seconds (later change)
+- Opening and closing take `GATE_TICKS = 5` sim seconds (was 60). The first 2 s are a fast, bouncy crack to 12% (a damped spring that overshoots, then settles) and a pause; the other 3 s heave it open. Closing plays it backwards, in the first 5 ticks of `gate-closing`; opening is the first 5 ticks of `docked` / `landed`.

@@ -1,4 +1,4 @@
-import { shipPhase, PREP_STEPS, type Phase, type Where } from "./timeline";
+import { shipPhase, type Phase, type Where } from "./timeline";
 
 /**
  * The ship's pose as a pure function of sim time (see timeline.ts for the phases).
@@ -14,16 +14,24 @@ export interface ShipPose { phase: Phase; at: Where; s: number; turn: number; di
 export const ease = (x: number) => x * x * (3 - 2 * x);
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 
-/** Gate opening profile over p in 0..1: crack open to 10%, hold, then heave open slowly. */
-export const gateProfile = (p: number) => (p < 0.15 ? 0.1 * ease(p / 0.15) : p < 0.3 ? 0.1 : 0.1 + 0.9 * ease((p - 0.3) / 0.7));
+/** The gates take 5 sim seconds to open or close. */
+export const GATE_TICKS = 5;
+const CRACK = 0.12;
+/**
+ * Gate opening profile over p in 0..1 (5 s): the first 2 s are a fast bouncy crack open to 12% (a damped spring that overshoots and settles) and a pause;
+ * the other 3 s heave it the rest of the way. Closing plays it backwards.
+ */
+export const gateProfile = (p: number) => {
+  if (p < 0.4) { const q = p / 0.4; return CRACK * (1 - Math.exp(-7 * q) * Math.cos(14 * q)); }
+  return CRACK + (1 - CRACK) * ease((p - 0.4) / 0.6);
+};
 
 const OPEN: GateLevel = { v: 1, moving: false }, SHUT: GateLevel = { v: 0, moving: false };
-const OPENING_TICKS = PREP_STEPS[0][1];
 
 /** Gate at the dock the ship is sitting at; `arrival` is the phase that follows the ship's arrival there. */
 function dockGate(phase: Phase, t: number, u: number, arrival: Phase): GateLevel {
-  if (phase === arrival) return t < OPENING_TICKS ? { v: gateProfile(t / OPENING_TICKS), moving: true } : OPEN;
-  if (phase === "gate-closing") return { v: gateProfile(1 - u), moving: true };
+  if (phase === arrival) return t < GATE_TICKS ? { v: gateProfile(t / GATE_TICKS), moving: true } : OPEN;
+  if (phase === "gate-closing") return t < GATE_TICKS ? { v: gateProfile(1 - t / GATE_TICKS), moving: true } : SHUT;
   return SHUT;
 }
 
