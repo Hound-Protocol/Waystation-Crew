@@ -61,7 +61,7 @@ export function buildStarterStation(seed = 1): Station {
   });
   // ring links between neighbouring modules, arcing inward
   placed.forEach((m, i) => {
-    if (i % 3 === 2) return;                                // leave some gaps: not every neighbour is linked
+    if (i % 2 === 1) return;                                // leave gaps: not every neighbour is linked
     const n = placed[(i + 1) % placed.length];
     const a = { x: m.door.x + m.out.x, y: m.door.y + m.out.y }, b = { x: n.door.x + n.out.x, y: n.door.y + n.out.y };
     const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, k = 0.62;

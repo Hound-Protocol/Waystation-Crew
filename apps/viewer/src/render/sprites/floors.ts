@@ -16,8 +16,8 @@ export function drawFloor(style: number, parity: number): Img {
   const im = new Img();
   switch (style) {
     case 1: { // clinical: pale tiles
-      im.rect(0, 0, 15, 15, hex(parity ? "#4a525c" : "#515963"));
-      im.rect(0, 0, 15, 0, hex("#646d79")); im.rect(0, 0, 0, 15, hex("#646d79")); im.rect(15, 0, 15, 15, hex("#2f353d")); im.rect(0, 15, 15, 15, hex("#2f353d"));
+      im.rect(0, 0, 15, 15, hex(parity ? "#5d6773" : "#66717e"));
+      im.rect(0, 0, 15, 0, hex("#7c8795")); im.rect(0, 0, 0, 15, hex("#7c8795")); im.rect(15, 0, 15, 15, hex("#2f353d")); im.rect(0, 15, 15, 15, hex("#2f353d"));
       im.px(7, 7, hex("#5c6571")); im.px(8, 8, hex("#5c6571")); break; }
     case 2: { // command carpet: deep blue with a pinstripe
       im.rect(0, 0, 15, 15, hex(parity ? "#1c2744" : "#1f2b4a"));

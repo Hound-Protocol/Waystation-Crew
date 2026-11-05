@@ -63,6 +63,18 @@ export class Canvas {
   fill(x0: number, y0: number, x1: number, y1: number, c: string, sx = 1, sy = 1): this { for (let y = y0; y <= y1; y += sy) for (let x = x0; x <= x1; x += sx) this.put(x, y, c); return this; }
   /** Mirror-place across the vertical centre line. */
   sym(c: string, ...p: Array<[number, number]>): this { for (const [x, y] of p) { this.put(x, y, c); this.put(this.w - 1 - x, y, c); } return this; }
+  /** True when every neighbour (8-way) is plain floor or outside the shape, so an item here cannot box anything in. */
+  private isolated(x: number, y: number) {
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { if (dx || dy) { const c = this.g[y + 1 + dy]?.[x + 1 + dx]; if (c !== undefined && c !== "." && c !== " ") return false; } }
+    return true;
+  }
+  /** Line the north edge of the room with equipment, cycling through `glyphs`, every `step` cells. Keeps cells next to the edge passable. */
+  edge(glyphs: string, step = 3): this {
+    let n = 0;
+    for (let y = 0; y < this.h; y++) for (let x = 0; x < this.w; x++)
+      if (this.isFloor(x, y) && !this.isFloor(x, y - 1) && this.isFloor(x - 1, y) && this.isFloor(x + 1, y) && this.isFloor(x, y + 1) && (x * 2 + y) % step === 0 && this.isolated(x, y)) this.put(x, y, glyphs[n++ % glyphs.length]);
+    return this;
+  }
   /** Airlock cells just outside the top edge for columns in [x0, x1]. */
   airlocks(x0: number, x1: number): this {
     for (let x = x0; x <= x1; x++) for (let y = 1; y <= this.h; y++) if (this.g[y][x + 1] === ".") { this.g[y - 1][x + 1] = "A"; break; }
