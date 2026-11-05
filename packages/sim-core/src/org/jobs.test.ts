@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { HUB } from "../station/starter";
 import { createWorld, step } from "../world";
 import { addCharacter } from "../ecs";
 import { Department } from "./departments";
@@ -8,7 +9,7 @@ import { CharState } from "../ai/affordances";
 import { interactionPoint } from "../station/starter";
 
 const spawn = (w: ReturnType<typeof createWorld>, dept: Department, i = 0) =>
-  addCharacter(w, { name: `E${i}`, dept, rank: Rank.Trainee, x: 57 + (i % 10), y: 70 });
+  addCharacter(w, { name: `E${i}`, dept, rank: Rank.Trainee, x: HUB.x - 5 + (i % 10), y: HUB.y + 5 });
 
 describe("shifts", () => {
   it("starts at day shift and cycles in 8h blocks", () => {
@@ -57,5 +58,16 @@ describe("assignJobs", () => {
     const night = w.posts.find((p) => p.dept === Department.Engineering && p.shift === "night")!;
     w.chars.job[id] = night.id;
     for (let t = 0; t < 600; t++) { step(w); expect(w.chars.state[id]).not.toBe(CharState.Working); }
+  });
+});
+
+describe("staffing on the starter station", () => {
+  it.each([1, 2, 3, 4, 5])("seed %i: at least 95 of 100 arrivals get a job", async (seed) => {
+    const { seedPopulation } = await import("../population");
+    const w = createWorld(seed);
+    seedPopulation(w, 100);
+    let assigned = 0;
+    for (let i = 0; i < 100; i++) if (w.chars.job[i] >= 0) assigned++;
+    expect(assigned).toBeGreaterThanOrEqual(95);
   });
 });

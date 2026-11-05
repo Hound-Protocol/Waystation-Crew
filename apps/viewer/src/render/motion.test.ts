@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { HUB } from "@wc/sim-core";
 import { findPath, ActionKind, WALK_SPEED } from "@wc/sim-core";
 import { SimHost } from "../simhost";
 import { Tracks } from "./interp";
@@ -8,9 +9,9 @@ import { ClockSync } from "./clock";
 function walkTrace(path: "straight" | "corner") {
   const host = new SimHost({ seed: 1, population: 3, budgetMs: Infinity });
   const w = host.world, id = 0;
-  w.chars.x[id] = 59; w.chars.y[id] = 73;
-  const goal = path === "straight" ? { x: 71, y: 73 } : { x: 70, y: 62 };
-  const route = findPath(w.station.map, { x: 59, y: 73 }, goal)!;
+  w.chars.x[id] = HUB.x - 6; w.chars.y[id] = HUB.y + 5;
+  const goal = path === "straight" ? { x: HUB.x + 6, y: HUB.y + 5 } : { x: HUB.x + 5, y: HUB.y - 5 };
+  const route = findPath(w.station.map, { x: HUB.x - 6, y: HUB.y + 5 }, goal)!;
   w.actions[id] = { kind: ActionKind.Wander, furnitureId: -1, path: route.slice(), ticksLeft: 0 };
   const snap = host.snapshot() as any;
   const tracks = new Tracks(); tracks.reset(snap.chars);

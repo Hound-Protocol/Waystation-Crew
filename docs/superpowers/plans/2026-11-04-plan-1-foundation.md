@@ -101,9 +101,9 @@
 - Test: `packages/sim-core/src/station/nav.test.ts`
 
 **Interfaces:**
-- Produces: `TileKind` enum (Floor, Wall, Door, Bed, Console, Table, Plant, Airlock…); `Tilemap {w,h,tiles: Uint8Array}` with `get/set`; `Furniture {kind, x, y, roomId}`; `findPath(map: Tilemap, from: Point, to: Point): Point[] | null` (A*, 4-neighbour, doors passable, walls and furniture blockers not); `buildStarterStation(): {map: Tilemap; furniture: Furniture[]; rooms: Room[]}` with rooms: Bridge, Engineering, Medbay, Security, Cargo, Galley/Mess, Habitation (≥100 beds), Airlock/Docking.
+- Produces: `TileKind` enum (Floor, Wall, Door, Bed, Console, Table, Plant, Airlock…); `Tilemap {w,h,tiles: Uint8Array}` with `get/set`; `Furniture {kind, x, y, roomId}`; `findPath(map: Tilemap, from: Point, to: Point): Point[] | null` (A*, 4-neighbour, doors passable, walls and furniture blockers not); `buildStarterStation(): {map: Tilemap; furniture: Furniture[]; rooms: Room[]}` with modular station (see station/layout.ts): 8 module kinds with 5 stored presets each (Arrivals, Bridge, Medbay, Security, Engineering, Cargo, Galley, Habitation ≥100 beds), docked together around a plaza by short corridor spokes.
 
-- [ ] **Step 1: Failing tests:** path across open floor is shortest; path through a door succeeds; path to enclosed tile returns `null`; every room reachable from Docking in the starter station; Habitation has ≥100 beds.
+- [ ] **Step 1: Failing tests:** path across open floor is shortest; path through a door succeeds; path to enclosed tile returns `null`; every room reachable from the plaza in the starter station; Habitation has ≥100 beds.
 - [ ] **Step 2:** FAIL. **Step 3:** Implement A* with binary heap; starter layout authored as ASCII in `starter.ts` and parsed. **Step 4:** PASS. **Step 5:** Commit `feat(sim): tilemap, A* and starter station`.
 
 ### Task 5: Needs and affordance-based decisions

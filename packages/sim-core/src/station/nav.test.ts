@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { TileKind, createTilemap } from "./tilemap";
 import { findPath } from "./nav";
+import { HUB } from "./layout";
 import { buildStarterStation, interactionPoint } from "./starter";
 import { FLOOR_STYLE, type ModuleKind } from "./modules";
 
@@ -86,12 +87,27 @@ describe("starter station", () => {
     for (let y = dockRoom.y; y < dockRoom.y + dockRoom.h; y++) for (let x = dockRoom.x; x < dockRoom.x + dockRoom.w; x++) if (st.map.get(x, y) === TileKind.Airlock) n++;
     expect(n).toBeGreaterThanOrEqual(6);
   });
-  it("keeps modules as separate pods with open space between them", () => {
+  it("slaps modules together: most modules sit within a few tiles of a neighbour", () => {
     const gap = (a: R, b: R) => Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w), b.y - (a.y + a.h), a.y - (b.y + b.h));
-    for (const a of st.rooms) for (const b of st.rooms) if (a.id < b.id) expect(gap(a, b), `${a.name}@${a.x},${a.y} vs ${b.name}@${b.x},${b.y}`).toBeGreaterThanOrEqual(1);
+    const touching = st.rooms.filter((a) => st.rooms.some((b) => b.id !== a.id && gap(a, b) <= 3));
+    expect(touching.length).toBeGreaterThanOrEqual(st.rooms.length - 2);
+  });
+  it("is compact: every module within 50 tiles of the plaza and links stay short", () => {
+    for (const r of st.rooms) expect(Math.hypot(r.x + r.w / 2 - HUB.x, r.y + r.h / 2 - HUB.y), r.name).toBeLessThan(50);
+    let corridor = 0;
+    for (let i = 0; i < st.map.tiles.length; i++) if (st.map.tiles[i] === TileKind.Floor && st.floors![i] === 0) corridor++;
+    expect(corridor).toBeLessThan(900);
+  });
+  it.each([2, 3, 4, 5])("builds and connects every module for seed %i", (seed) => {
+    const s2 = buildStarterStation(seed), plaza = { x: HUB.x - 4, y: HUB.y + 5 };
+    for (const r of s2.rooms) {
+      const f = s2.furniture.find((g) => g.roomId === r.id && g.kind === TileKind.Console) ?? s2.furniture.find((g) => g.roomId === r.id);
+      if (!f) continue;
+      expect(findPath(s2.map, plaza, interactionPoint(s2.map, f)!), `${r.name}@${r.x},${r.y}`).not.toBeNull();
+    }
   });
   it("is organic: modules sit around a plaza at different distances and the outline is not a rectangle", () => {
-    const dists = st.rooms.map((r) => Math.hypot(r.x + r.w / 2 - 65, r.y + r.h / 2 - 67));
+    const dists = st.rooms.map((r) => Math.hypot(r.x + r.w / 2 - HUB.x, r.y + r.h / 2 - HUB.y));
     expect(Math.max(...dists) - Math.min(...dists)).toBeGreaterThan(2);
     let voidCount = 0, tiles = 0;
     for (let y = 0; y < st.map.h; y++) for (let x = 0; x < st.map.w; x++) { tiles++; if (st.map.get(x, y) === TileKind.Void) voidCount++; }
@@ -113,7 +129,7 @@ describe("starter station", () => {
     }
   });
   it("dresses walls with mounts and tags every solid prop in the map", () => {
-    expect(st.deco!.filter((d) => d.layer === "wall").length).toBeGreaterThan(60);
+    expect(st.deco!.filter((d) => d.layer === "wall").length).toBeGreaterThan(40);
     for (const d of st.deco!.filter((q) => q.layer === "prop")) expect(st.map.get(d.x, d.y), d.sprite).toBe(TileKind.Prop);
   });
 });

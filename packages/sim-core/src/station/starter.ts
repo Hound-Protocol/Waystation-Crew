@@ -16,4 +16,4 @@ export function interactionPoint(map: Tilemap, f: Furniture): Point | null {
   return null;
 }
 
-export { buildStarterStation, STATION_W, STATION_H } from "./layout";
+export { buildStarterStation, STATION_W, STATION_H, HUB } from "./layout";

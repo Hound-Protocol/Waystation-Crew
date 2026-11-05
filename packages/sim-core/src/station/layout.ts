@@ -1,32 +1,93 @@
 import { TileKind, createTilemap, type Tilemap } from "./tilemap";
 import { createRng, type Rng } from "../rng";
-import { MODULE_KINDS, MOUNTS, pickPreset, ringWall, stampModule, type ModuleKind, type Placed } from "./modules";
+import { MOUNTS, pickPreset, ringWall, stampModule, type ModuleKind } from "./modules";
+import { rotateCW, turnsToFace, type Blueprint, type Dir } from "./blueprint";
 import type { Station, Room, Furniture, Deco } from "./starter";
 
-export const STATION_W = 130, STATION_H = 130;
-const CX = 65, CY = 67, PLAZA_R = 9;
+export const STATION_W = 160, STATION_H = 160;
+const CX = 80, CY = 80, PLAZA_R = 9;
+/** Centre of the plaza hub; the walkable open floor everything hangs off. */
+export const HUB = { x: CX, y: CY };
+/** Longest connecting corridor, in tiles. Modules are slapped together; links stay short. */
+const MAX_LINK = 30, LINK_WEIGHT = 2.4;     // modules dock on the spokes; every link tile costs, so short links win
 
-interface Slot { kind: ModuleKind; angle: number; dist: number }
-/** Ring of modules around the central plaza; angle in degrees (0 = east, 90 = south). */
-export const STARTER_SLOTS: Slot[] = [
-  { kind: "arrivals", angle: -90, dist: 47 }, { kind: "security", angle: -58, dist: 44 }, { kind: "supply", angle: -27, dist: 48 },
-  { kind: "engineering", angle: 3, dist: 47 }, { kind: "galley", angle: 29, dist: 49 }, { kind: "habitation", angle: 66, dist: 49 },
-  { kind: "habitation", angle: 90, dist: 49 }, { kind: "habitation", angle: 120, dist: 50 }, { kind: "habitation", angle: 152, dist: 47 },
-  { kind: "medical", angle: 182, dist: 47 }, { kind: "command", angle: -150, dist: 49 }, { kind: "habitation", angle: -117, dist: 50 },
+/** Build order: arrivals first, then the departments, then the habitation blocks. Every kind gets 5 stored presets (modules/presets.ts). */
+export const STARTER_ORDER: ModuleKind[] = [
+  "arrivals", "command", "security", "engineering", "supply", "galley", "medical",
+  "habitation", "habitation", "habitation", "habitation", "habitation",
 ];
 
+const FACINGS: Dir[] = [{ x: 0, y: 1 }, { x: 0, y: -1 }, { x: 1, y: 0 }, { x: -1, y: 0 }];
+const N4: Dir[] = [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }];
 type P = { x: number; y: number };
-const bez = (a: P, c: P, b: P, t: number): P => ({ x: (1 - t) ** 2 * a.x + 2 * (1 - t) * t * c.x + t * t * b.x, y: (1 - t) ** 2 * a.y + 2 * (1 - t) * t * c.y + t * t * b.y });
 
-/** Lay corridor floor along a curve with a round brush. Only void tiles are written, so module walls stay intact. */
-function corridor(map: Tilemap, a: P, c: P, b: P, radius = 1.5) {
-  const len = Math.hypot(b.x - a.x, b.y - a.y) + Math.hypot(c.x - a.x, c.y - a.y);
-  const n = Math.ceil(len * 2);
-  for (let i = 0; i <= n; i++) {
-    const p = bez(a, c, b, i / n);
-    for (let y = Math.floor(p.y - radius); y <= Math.ceil(p.y + radius); y++)
-      for (let x = Math.floor(p.x - radius); x <= Math.ceil(p.x + radius); x++)
-        if (map.inBounds(x, y) && Math.hypot(x - p.x, y - p.y) <= radius && map.get(x, y) === TileKind.Void) map.set(x, y, TileKind.Floor);
+/** Walkable circulation: plaza (floor style 8) or corridor (style 0). */
+const isPublic = (map: Tilemap, floors: Uint8Array, x: number, y: number) =>
+  map.inBounds(x, y) && map.get(x, y) === TileKind.Floor && (floors[y * map.w + x] === 0 || floors[y * map.w + x] === 8);
+
+/** Dry run: can this rotated blueprint be stamped at (ox, oy)? Cells must be on void and keep one wall tile from anything built. */
+function fits(map: Tilemap, bp: Blueprint, ox: number, oy: number): boolean {
+  const gh = bp.grid.length, gw = bp.grid[0].length;
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) {
+    if (bp.grid[y][x] === " ") continue;
+    const X = ox + x, Y = oy + y;
+    if (X < 2 || Y < 2 || X >= map.w - 2 || Y >= map.h - 2 || map.get(X, Y) !== TileKind.Void) return false;
+    const isDoor = x === bp.door.x && y === bp.door.y;
+    if (isDoor) continue;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const k = map.get(X + dx, Y + dy);
+      if (k !== TileKind.Void && k !== TileKind.Wall) return false;      // would touch another room's floor with no wall between
+    }
+  }
+  return true;
+}
+
+/** Steps through void to reach circulation, for every void tile (-1 = unreachable). Multi-source BFS from the tiles beside the plaza and corridors. */
+function linkField(map: Tilemap, floors: Uint8Array, maxLen: number): Int16Array {
+  const dist = new Int16Array(map.w * map.h).fill(-1);
+  let frontier: number[] = [];
+  for (let y = 0; y < map.h; y++) for (let x = 0; x < map.w; x++) {
+    if (map.get(x, y) !== TileKind.Void) continue;
+    if (N4.some((n) => isPublic(map, floors, x + n.x, y + n.y))) { dist[y * map.w + x] = 0; frontier.push(y * map.w + x); }
+  }
+  for (let d = 1; d <= maxLen && frontier.length; d++) {
+    const next: number[] = [];
+    for (const k of frontier) {
+      const x = k % map.w, y = Math.floor(k / map.w);
+      for (const n of N4) {
+        const X = x + n.x, Y = y + n.y;
+        if (!map.inBounds(X, Y) || map.get(X, Y) !== TileKind.Void || dist[Y * map.w + X] !== -1) continue;
+        dist[Y * map.w + X] = d; next.push(Y * map.w + X);
+      }
+    }
+    frontier = next;
+  }
+  return dist;
+}
+
+/** Follow the field downhill from `from` to circulation. Empty when `from` already is circulation. */
+function linkPath(map: Tilemap, floors: Uint8Array, dist: Int16Array, from: P): P[] | null {
+  if (isPublic(map, floors, from.x, from.y)) return [];
+  let d = dist[from.y * map.w + from.x];
+  if (d < 0) return null;
+  const path: P[] = [{ ...from }];
+  let cur = from;
+  while (d > 0) {
+    const n = N4.map((m) => ({ x: cur.x + m.x, y: cur.y + m.y })).find((q) => map.inBounds(q.x, q.y) && dist[q.y * map.w + q.x] === d - 1);
+    if (!n) return null;
+    path.push(n); cur = n; d--;
+  }
+  return path;
+}
+
+function carve(map: Tilemap, floors: Uint8Array, path: P[], wide: boolean) {
+  for (const p of path) {
+    map.set(p.x, p.y, TileKind.Floor); floors[p.y * map.w + p.x] = 0;
+    if (!wide) continue;
+    for (const n of [{ x: 1, y: 0 }, { x: 0, y: 1 }]) {                      // widen to two tiles where there is room
+      const x = p.x + n.x, y = p.y + n.y;
+      if (map.inBounds(x, y) && map.get(x, y) === TileKind.Void && !N4.some((m) => { const k = map.get(x + m.x, y + m.y); return k !== TileKind.Void && k !== TileKind.Wall && k !== TileKind.Floor; })) { map.set(x, y, TileKind.Floor); floors[y * map.w + x] = 0; }
+    }
   }
 }
 
@@ -37,42 +98,62 @@ export function buildStarterStation(seed = 1): Station {
   const rng: Rng = createRng(seed);
   const used = new Map<ModuleKind, Set<number>>();
 
-  // plaza: an organic disc
-  for (let y = CY - PLAZA_R - 2; y <= CY + PLAZA_R + 2; y++) for (let x = CX - PLAZA_R - 2; x <= CX + PLAZA_R + 2; x++) {
+  // plaza: a small organic hub
+  for (let y = CY - 10; y <= CY + 10; y++) for (let x = CX - 10; x <= CX + 10; x++) {
     const a = Math.atan2(y - CY, x - CX), r = PLAZA_R + 0.8 * Math.sin(3 * a + 0.6);
     if (Math.hypot(x - CX, y - CY) <= r) { map.set(x, y, TileKind.Floor); floors[y * STATION_W + x] = 8; }
   }
 
-  const placed: Placed[] = [];
-  for (const s of STARTER_SLOTS) {
-    const rad = (s.angle * Math.PI) / 180, jitter = rng.int(-2, 2);
-    const mx = Math.round(CX + Math.cos(rad) * (s.dist + jitter)), my = Math.round(CY + Math.sin(rad) * (s.dist + jitter));
-    const seen = used.get(s.kind) ?? new Set<number>(); used.set(s.kind, seen);
-    const preset = pickPreset(s.kind, rng, seen); seen.add(preset.variant);
-    placed.push(stampModule({ map, rooms, furniture, deco, floors }, preset, mx, my, { x: CX - mx, y: CY - my }));
+  // spokes: short corridor spines radiating from the plaza, with a side branch; modules get slapped on along them
+  const spokes = 7, start = rng.int(0, 359);
+  for (let i = 0; i < spokes; i++) {
+    const a = ((start + (i * 360) / spokes + rng.int(-14, 14)) * Math.PI) / 180, len = rng.int(13, 19), dx = Math.cos(a), dy = Math.sin(a);
+    const line: P[] = [];
+    for (let t = PLAZA_R - 2; t <= PLAZA_R + len; t++) line.push({ x: Math.round(CX + dx * t), y: Math.round(CY + dy * t) });
+    const bt = PLAZA_R + Math.round(len * 0.6), bs = i % 2 ? 1 : -1, bl = rng.int(5, 8);
+    for (let t = 1; t <= bl; t++) line.push({ x: Math.round(CX + dx * bt - dy * bs * t), y: Math.round(CY + dy * bt + dx * bs * t) });
+    carve(map, floors, line, true);
   }
-  // spokes: from just outside each door, bending organically into the plaza edge
-  placed.forEach((m, i) => {
-    const start = { x: m.door.x + m.out.x, y: m.door.y + m.out.y };
-    const ang = Math.atan2(start.y - CY, start.x - CX), end = { x: CX + Math.cos(ang) * (PLAZA_R - 1), y: CY + Math.sin(ang) * (PLAZA_R - 1) };
-    const mid = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 }, bend = (i % 2 ? 1 : -1) * (3 + (i % 3));
-    const len = Math.hypot(end.x - start.x, end.y - start.y) || 1;
-    corridor(map, start, { x: mid.x - ((end.y - start.y) / len) * bend, y: mid.y + ((end.x - start.x) / len) * bend }, end);
-  });
-  // ring links between neighbouring modules, arcing inward
-  placed.forEach((m, i) => {
-    if (i % 2 === 1) return;                                // leave gaps: not every neighbour is linked
-    const n = placed[(i + 1) % placed.length];
-    const a = { x: m.door.x + m.out.x, y: m.door.y + m.out.y }, b = { x: n.door.x + n.out.x, y: n.door.y + n.out.y };
-    const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, k = 0.62;
-    corridor(map, a, { x: CX + (mid.x - CX) * k, y: CY + (mid.y - CY) * k }, b, 1.2);
-  });
+
+  // candidate offsets, nearest to the hub first
+  const offsets: P[] = [];
+  for (let dy = -50; dy <= 50; dy++) for (let dx = -50; dx <= 50; dx++) offsets.push({ x: dx, y: dy });
+  offsets.sort((a, b) => a.x * a.x + a.y * a.y - (b.x * b.x + b.y * b.y));
+
+  const target = { map, rooms, furniture, deco, floors };
+  for (const kind of STARTER_ORDER) {
+    const seen = used.get(kind) ?? new Set<number>(); used.set(kind, seen);
+    const preset = pickPreset(kind, rng, seen); seen.add(preset.variant);
+    const dist = linkField(map, floors, MAX_LINK);
+    const rotated = FACINGS.map((facing) => ({ facing, bp: rotateCW(preset.blueprint, turnsToFace(facing)) }));
+    let best: { score: number; cx: number; cy: number; facing: Dir; path: P[] } | null = null;
+    for (const o of offsets) {
+      const near = Math.hypot(o.x, o.y);
+      if (best && near > best.score) break;                          // nothing farther out can beat the best score so far
+      for (const { facing, bp } of rotated) {
+        const gh = bp.grid.length, gw = bp.grid[0].length, cx = CX + o.x, cy = CY + o.y, ox = Math.round(cx - gw / 2), oy = Math.round(cy - gh / 2);
+        const out = { x: ox + bp.door.x + bp.out.x, y: oy + bp.door.y + bp.out.y };
+        if (!map.inBounds(out.x, out.y)) continue;
+        const pub = isPublic(map, floors, out.x, out.y), d = pub ? 0 : dist[out.y * map.w + out.x] + 1;
+        if (!pub && d <= 0) continue;
+        const score = near + d * LINK_WEIGHT + o.x * 0.0001;
+        if (best && score >= best.score) continue;
+        if (!fits(map, bp, ox, oy)) continue;
+        const path = linkPath(map, floors, dist, out);
+        if (!path || path.some((p) => p.x >= ox && p.x < ox + gw && p.y >= oy && p.y < oy + gh && bp.grid[p.y - oy][p.x - ox] !== " ")) continue;
+        best = { score: score + rng.int(0, 3), cx, cy, facing, path };
+      }
+    }
+    if (!best) throw new Error(`no room to place ${kind}`);
+    stampModule(target, preset, best.cx, best.cy, best.facing);
+    carve(map, floors, best.path, true);
+  }
   // walls around corridors and plaza
   for (let y = 0; y < STATION_H; y++) for (let x = 0; x < STATION_W; x++) ringWall(map, x, y);
   // plaza dressing: holo table, benches and planters
   const prop = (x: number, y: number, sprite: string) => { map.set(x, y, TileKind.Prop); deco.push({ x, y, sprite, layer: "prop" }); };
   prop(CX, CY, "prop:holo");
-  for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2 + 0.3; prop(Math.round(CX + Math.cos(a) * 5), Math.round(CY + Math.sin(a) * 5), i % 2 ? "plant:tree" : "prop:sofa"); }
+  for (let i = 0; i < 4; i++) { const a = (i / 4) * Math.PI * 2 + 0.6; prop(Math.round(CX + Math.cos(a) * 3.5), Math.round(CY + Math.sin(a) * 3.5), i % 2 ? "plant:tree" : "prop:sofa"); }
   furnitureIds(furniture);
   wallMounts(map, rooms, deco, rng);
   return { map, rooms, furniture, deco, floors };

@@ -24,8 +24,9 @@ export function buildJobPosts(station: Station): JobPost[] {
   const posts: JobPost[] = [];
   for (const shift of SHIFTS)
     for (const f of station.furniture) {
-      if (f.kind !== TileKind.Console) continue;
-      const dept = ROOM_DEPT[station.rooms[f.roomId]?.name ?? ""];
+      const room = station.rooms[f.roomId]?.name ?? "";
+      if (f.kind !== TileKind.Console && f.kind !== TileKind.Table) continue;   // consoles and desks/tables are workstations
+      const dept = ROOM_DEPT[room];
       if (dept === undefined) continue;
       posts.push({ id: posts.length, dept, minRank: dept === Department.Command ? Rank.Specialist : Rank.Trainee, workstationFurnitureId: f.id, shift });
     }
@@ -37,9 +38,9 @@ export function jobOf(world: World, id: number): JobPost | null {
   return j >= 0 ? world.posts[j] : null;
 }
 
-function take(world: World, id: number, dept: Department): boolean {
+function take(world: World, id: number, dept: Department | null): boolean {
   for (const p of world.posts) {
-    if (p.dept !== dept || world.postHolder.has(p.id) || world.chars.rank[id] < p.minRank) continue;
+    if ((dept !== null && p.dept !== dept) || world.postHolder.has(p.id) || world.chars.rank[id] < p.minRank) continue;
     world.postHolder.set(p.id, id);
     world.chars.job[id] = p.id;
     return true;
@@ -47,12 +48,14 @@ function take(world: World, id: number, dept: Department): boolean {
   return false;
 }
 
-/** Fill open posts for unassigned characters: own department first, then Service, else stay unassigned. */
+/** Fill open posts for unassigned characters: own department first, then Service, then any open post their rank allows, else stay unassigned. */
 export function assignJobs(world: World, posts: JobPost[] = world.posts): void {
   void posts;
   const c = world.chars;
   for (let id = 0; id < c.count; id++) {
     if (c.job[id] >= 0) continue;
-    if (!take(world, id, c.dept[id]) && c.dept[id] !== Department.Service) take(world, id, Department.Service);
+    if (take(world, id, c.dept[id])) continue;
+    if (c.dept[id] !== Department.Service && take(world, id, Department.Service)) continue;
+    take(world, id, null);     // last resort: any open post whose rank gate they meet
   }
 }
