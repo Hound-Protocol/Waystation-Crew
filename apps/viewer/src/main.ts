@@ -1,3 +1,6 @@
+import { ShipLayer, shipFixtures } from "./render/ship";
+import { shipState } from "./render/shipstate";
+import type { TileKind } from "@wc/sim-core";
 import { Application, Container, Graphics, Sprite } from "pixi.js";
 import { STATION_NAME, type ServerMsg, type SimTransport } from "@wc/protocol";
 import { createWorkerTransport } from "./transport/worker";
@@ -33,7 +36,8 @@ async function boot() {
   const texs = characterTextures();
   const doorLayer = new DoorLayer(texs);
   const solar = new SolarLayer();
-  world.addChild(solar.root, mapLayer, doorLayer.root, chars.root);
+  const shipLayer = new ShipLayer();
+  world.addChild(solar.root, mapLayer, shipLayer.root, doorLayer.root, chars.root);
   const space = new SpaceLayer();
   app.stage.addChild(space.root, world);
   world.alpha = 0; // fades in with the first snapshot
@@ -49,6 +53,7 @@ async function boot() {
   footer.textContent = `${STATION_NAME} · build ${BUILD}`;
 
   const fades: Sprite[] = [];
+  let shipDebug: ReturnType<typeof shipState> | null = null;   // dev hook: freeze the ship routine at a tick of its cycle
   const transport: SimTransport = createWorkerTransport();
   const select = (id: number | null) => {
     selected = id; follow = id !== null; if (id === null) markerPos = null;
@@ -63,6 +68,7 @@ async function boot() {
       mapLayer.removeChildren();
       mapLayer.addChild(new Sprite(canvasTexture(buildTileCanvas({ w: m.w, h: m.h, tiles: m.tiles, rooms: m.rooms, furniture: m.furniture, deco: m.deco, floors: m.floors }))));
       doorLayer.reset(m.tiles, m.w, m.h, (x, y) => doorIsVertical(m.tiles, m.w, m.h, x, y));
+      shipLayer.reset(shipFixtures(m.deco ?? [], (x, y) => (m.tiles[y * m.w + x] ?? 0) as TileKind));
       mapW = m.w; mapH = m.h; crew = m.chars.length;
       chars.reset(m.chars); tracks.reset(m.chars); panel.setChars(m.chars); if (selected !== null) select(null);
       renderTick = latestTick = m.tick; clock.reset(m.tick, speed);
@@ -76,6 +82,7 @@ async function boot() {
       const next = new Sprite(canvasTexture(buildTileCanvas({ w: m.w, h: m.h, tiles: m.tiles, rooms: m.rooms, furniture: m.furniture, deco: m.deco, floors: m.floors })));
       next.alpha = 0; mapLayer.addChild(next); fades.push(next);
       doorLayer.reset(m.tiles, m.w, m.h, (x, y) => doorIsVertical(m.tiles, m.w, m.h, x, y));
+      shipLayer.reset(shipFixtures(m.deco ?? [], (x, y) => (m.tiles[y * m.w + x] ?? 0) as TileKind));
       mapW = m.w; mapH = m.h;
     } else if (m.t === "delta") {
       tracks.apply(m.moves); tracks.prune(m.tick - 120); latestTick = m.tick; speed = m.clock.speed; paused = m.clock.paused;
@@ -127,6 +134,7 @@ async function boot() {
     world.alpha = worldA * worldA * (3 - 2 * worldA);
     world.scale.set(cam.scale / TILE); world.position.set(cam.tx, cam.ty);
     solar.update(dt, renderTick, cam.scale);
+    shipLayer.update(shipDebug ?? shipState(renderTick), performance.now() / 1000);
     space.update(dt, cam.tx, cam.ty, app.screen.width, app.screen.height);
     if (selected !== null) {
       const p = tracks.positionAt(selected, renderTick);
@@ -139,6 +147,6 @@ async function boot() {
     const d = Math.floor((latestTick + 21600) / 86400) + 1, h = Math.floor(((latestTick / 3600) + 6) % 24), m = Math.floor((latestTick / 60) % 60);
     hud.innerHTML = `<b>${STATION_NAME}</b> · day ${d} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} · crew ${crew} · Z${zoomLevel(cam.scale)}${paused ? " · paused" : ""}${speed !== 1 ? ` · ${speed}x` : ""}`;
   });
-  (window as unknown as { __wc: unknown }).__wc = { cam, transport };
+  (window as unknown as { __wc: unknown }).__wc = { cam, transport, holdShip: (tick: number | null) => { shipDebug = tick === null ? null : shipState(tick); } };
 }
 boot().catch((e) => showError(`Could not start the renderer: ${e instanceof Error ? e.message : e}`));

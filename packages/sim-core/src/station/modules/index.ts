@@ -50,7 +50,7 @@ export function stampModule(t: ModuleTarget, p: ModulePreset, cx: number, cy: nu
       const def = GLYPHS[ch];
       if (!def) throw new Error(`unknown glyph ${ch}`);
       t.floors[Y * t.map.w + X] = FLOOR_STYLE[p.kind];
-      if (def.tile === TileKind.Wall) { set(X, Y, TileKind.Wall); continue; }
+      if (def.tile === TileKind.Wall) { set(X, Y, TileKind.Wall); if (def.sprite) t.deco.push({ x: X, y: Y, sprite: def.sprite, layer: "wall" }); continue; }
       set(X, Y, def.tile);
       const sprite = def.sprite ?? `${def.prefix}:${p.kind}`;
       if (def.tile === TileKind.Floor) t.deco.push({ x: X, y: Y, sprite, layer: "floor" });

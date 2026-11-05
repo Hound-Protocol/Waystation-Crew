@@ -31,10 +31,21 @@ describe("dock: the cargo ship is parked at the Arrivals hall", () => {
     const flight = postsFor(st, st.furniture.keys()).filter((p) => p.dept === Department.Flight);
     expect(flight.length).toBeGreaterThanOrEqual(3);
   });
-  it("has jump seats, side doors and a cargo hold", () => {
+  it("has a seat line, side doors, a slotted hazard-framed hold and instruments", () => {
     const decoIn = (sprite: string) => st.deco!.filter((d) => d.sprite === sprite && d.x >= ship.x && d.x < ship.x + ship.w && d.y >= ship.y && d.y < ship.y + ship.h).length;
-    expect(decoIn("prop:jumpseat")).toBe(16);
+    expect(decoIn("prop:jumpseat") + decoIn("prop:jumpseat-n")).toBe(36);
+    expect(decoIn("prop:jumpseat")).toBe(18);                   // the far hull faces back the other way
+    expect(decoIn("prop:jumpseat-n")).toBe(18);
+    expect(decoIn("prop:thruster")).toBe(4);
+    expect(decoIn("wall:nozzle")).toBe(4);
     expect(decoIn("floor:slot")).toBe(12);
+    expect(decoIn("floor:slot-tl")).toBe(8);
+    expect(decoIn("floor:slot-ml")).toBe(8);
+    expect(decoIn("floor:hazard")).toBeGreaterThanOrEqual(60);
+    expect(decoIn("prop:instruments")).toBeGreaterThanOrEqual(4);
+    expect(decoIn("wall:canopy")).toBe(7);                      // windows: canopy across the nose, viewports, portholes
+    expect(decoIn("wall:viewport")).toBeGreaterThanOrEqual(4);
+    expect(decoIn("wall:porthole")).toBeGreaterThanOrEqual(10);
     let sideDoors = 0;
     for (let x = ship.x; x < ship.x + ship.w; x++) for (const y of [ship.y, ship.y + ship.h - 1]) if (st.map.get(x, y) === TileKind.Airlock) sideDoors++;
     expect(sideDoors).toBe(4);                                  // two doors on each side, two cells each

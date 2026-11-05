@@ -33,6 +33,9 @@ export function buildDock(st: Station, rng: Rng): Room | null {
   const arrivals = st.rooms[st.rooms.length - 1];
   // Ship: stern airlocks one column west of the Arrivals airlocks (the airlock edge is the hall's west column)
   stamp("ship_deck", (_rot, gw) => arr.x0 - gw, (rot) => HUB.y - rot.door.y);
+  // seats on the far hull face back the other way (sprites are not rotated with the blueprint)
+  const ship = st.rooms[st.rooms.length - 1], mid = ship.y + ship.h / 2;
+  for (const d of st.deco!) if (d.sprite === "prop:jumpseat" && d.y > mid) d.sprite = "prop:jumpseat-n";
   sealHull(st);
   void TileKind;
   return arrivals;

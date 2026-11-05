@@ -6,6 +6,9 @@ const shadow = (im: Img, x0 = 1, x1 = 14) => im.rect(x0, 15, x1, 15, SHD);
 const body = (im: Img, x0: number, y0: number, x1: number, y1: number, c: RGB) => { im.box(x0, y0, x1, y1, c); im.rect(x0 + 1, y0, x1 - 1, y0, mul(c, 1.5)); };
 
 export const EQUIPMENT: Record<string, () => Img> = {
+  // engine housing, nozzle pointing east (the docked ship's stern faces east)
+  "prop:thruster": () => { const im = new Img(); body(im, 1, 3, 10, 12, hex("#2a2d34")); im.rect(2, 4, 9, 4, hex("#8e9aa3")); im.rect(2, 11, 9, 11, hex("#14161a")); for (const y of [6, 7, 8, 9]) im.rect(3, y, 6, y, y % 2 ? hex("#c8601a") : hex("#e0741c")); im.rect(10, 5, 15, 10, hex("#14161a")); im.rect(11, 6, 15, 9, hex("#3a3f4a")); im.rect(12, 7, 15, 8, hex("#0b0d10")); im.px(9, 3, hex("#ffb02e")); shadow(im, 1, 10); return im; },
+  "prop:instruments": () => { const im = new Img(); body(im, 2, 3, 13, 13, hex("#2a2d34")); im.rect(3, 4, 12, 8, hex("#06202e")); im.rect(4, 5, 7, 5, hex("#4de1ff")); im.rect(4, 7, 9, 7, hex("#7dffb0")); im.px(10, 5, hex("#ffb02e")); im.px(11, 6, hex("#ff4040")); for (const x of [4, 6, 8, 10]) im.px(x, 11, x % 4 ? hex("#ffb02e") : hex("#7dffb0")); shadow(im); return im; },
   "prop:jumpseat": () => { const im = new Img(); body(im, 3, 2, 12, 13, hex("#2a2d34")); im.rect(4, 3, 11, 5, hex("#c8601a")); im.rect(4, 3, 11, 3, hex("#e0741c")); im.rect(4, 7, 11, 11, hex("#1b1e24")); im.rect(5, 8, 10, 10, hex("#2f3540")); im.px(3, 7, hex("#e0741c")); im.px(12, 7, hex("#e0741c")); shadow(im); return im; },
   "prop:locker": () => { const im = new Img(); body(im, 2, 1, 13, 14, hex("#4a5361")); im.rect(8, 2, 8, 13, hex("#2a3038")); for (const x of [4, 10]) for (const y of [3, 4, 5]) im.px(x, y, hex("#2a3038")); im.px(7, 8, AMBER); im.px(9, 8, AMBER); shadow(im); return im; },
   "prop:crate": () => { const im = new Img(); body(im, 1, 3, 14, 14, hex("#6b5a3a")); im.rect(2, 4, 13, 13, hex("#7a6842")); im.rect(1, 8, 14, 8, hex("#4a3d26")); for (let i = 2; i < 13; i++) { im.px(i, 4 + ((i + 3) % 9), hex("#4a3d26")); } im.rect(6, 5, 9, 6, hex("#b8941f")); shadow(im); return im; },
@@ -43,4 +46,12 @@ export const EQUIPMENT: Record<string, () => Img> = {
   "prop:suitrack": () => { const im = new Img(); body(im, 1, 1, 14, 14, hex("#2f343c")); for (const x of [2, 8]) { im.rect(x, 2, x + 4, 12, hex("#d9701c")); im.rect(x + 1, 3, x + 3, 5, BLK); im.rect(x + 1, 3, x + 3, 3, SCR); im.rect(x, 8, x + 4, 8, hex("#16181c")); } shadow(im); return im; },
   "prop:scales": () => { const im = new Img(); body(im, 2, 8, 13, 14, hex("#6d7580")); im.rect(3, 9, 12, 11, hex("#8e9aa3")); im.rect(5, 5, 10, 7, hex("#0e1a22")); im.px(6, 6, GREENE); im.px(8, 6, GREENE); im.px(9, 6, GREENE); im.rect(7, 7, 8, 8, hex("#4d5361")); shadow(im, 2, 13); return im; },
   "prop:coolant": () => { const im = new Img(); for (const x of [1, 8]) { body(im, x, 3, x + 6, 14, hex("#2b5a8a")); im.rect(x + 1, 5, x + 5, 12, hex("#3a78b0")); im.rect(x + 1, 5, x + 5, 5, ICE); im.rect(x + 2, 1, x + 4, 3, hex("#8e9aa3")); im.px(x + 3, 8, WHT); } shadow(im, 1, 14); return im; },
+};
+
+/** Seats on the far hull face the other way: the jump seat flipped top-to-bottom (the shadow row stays at the bottom). */
+EQUIPMENT["prop:jumpseat-n"] = () => {
+  const src = EQUIPMENT["prop:jumpseat"](), im = new Img();
+  for (let y = 0; y < 15; y++) for (let x = 0; x < 16; x++) { const i = (y * 16 + x) * 4, j = ((14 - y) * 16 + x) * 4; for (let k = 0; k < 4; k++) im.data[j + k] = src.data[i + k]; }
+  shadow(im);
+  return im;
 };

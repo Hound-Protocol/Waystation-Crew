@@ -4,7 +4,7 @@ import { TileKind } from "./tilemap";
 export type Dir = { x: number; y: number };
 export interface Blueprint { grid: string[]; door: { x: number; y: number }; out: Dir }   // out: direction pointing out of the door
 
-export interface GlyphDef { tile: TileKind; sprite?: string; layer?: "floor" | "prop" }
+export interface GlyphDef { tile: TileKind; sprite?: string; layer?: "floor" | "prop" | "wall" }
 
 /** Glyph vocabulary. Interactive glyphs get `${prefix}:${module kind}` sprites unless pinned. */
 export const GLYPHS: Record<string, GlyphDef & { prefix?: string }> = {
@@ -30,6 +30,14 @@ export const GLYPHS: Record<string, GlyphDef & { prefix?: string }> = {
   // ship deck
   "~": { tile: TileKind.Prop, sprite: "prop:jumpseat" },
   ",": { tile: TileKind.Floor, sprite: "floor:ramp", layer: "floor" }, ";": { tile: TileKind.Floor, sprite: "floor:slot", layer: "floor" },
+  "@": { tile: TileKind.Prop, sprite: "prop:instruments" }, "!": { tile: TileKind.Prop, sprite: "prop:thruster" },
+  "}": { tile: TileKind.Wall, sprite: "wall:nozzle", layer: "wall" },
+  // cargo slots (S = ";", M = "<" ">", L = "1 2 / 3 4") and hull windows (wall ring cells; the sprite is blitted over the wall)
+  "<": { tile: TileKind.Floor, sprite: "floor:slot-ml", layer: "floor" }, ">": { tile: TileKind.Floor, sprite: "floor:slot-mr", layer: "floor" },
+  "1": { tile: TileKind.Floor, sprite: "floor:slot-tl", layer: "floor" }, "2": { tile: TileKind.Floor, sprite: "floor:slot-tr", layer: "floor" },
+  "3": { tile: TileKind.Floor, sprite: "floor:slot-bl", layer: "floor" }, "4": { tile: TileKind.Floor, sprite: "floor:slot-br", layer: "floor" },
+  "[": { tile: TileKind.Wall, sprite: "wall:canopy", layer: "wall" }, "]": { tile: TileKind.Wall, sprite: "wall:viewport", layer: "wall" },
+  "(": { tile: TileKind.Wall, sprite: "wall:porthole", layer: "wall" }, ")": { tile: TileKind.Wall, sprite: "wall:shutter", layer: "wall" },
   o: { tile: TileKind.Floor, sprite: "floor:stool", layer: "floor" }, r: { tile: TileKind.Floor, sprite: "floor:rug", layer: "floor" },
   h: { tile: TileKind.Floor, sprite: "floor:hazard", layer: "floor" }, "=": { tile: TileKind.Floor, sprite: "floor:lane", layer: "floor" },
   "^": { tile: TileKind.Floor, sprite: "floor:arrow", layer: "floor" }, "+": { tile: TileKind.Floor, sprite: "floor:medcross", layer: "floor" },

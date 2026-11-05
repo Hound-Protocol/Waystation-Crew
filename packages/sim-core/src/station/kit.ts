@@ -50,19 +50,44 @@ export const ROOM_TYPES: RoomType[] = [
   { id: "pantry", kind: "galley", make: (r) => { const w = R(r, 6, 8), h = R(r, 5, 6), c = box(r, w, h).hline(0, w - 1, 0, "F", 2).put(w >> 1, 2, "T").put(0, 3, "S").put(w - 1, 3, "%"); return c.done(); } },
 ];
 
-/** The balanced hauler: 21 wide x 34 long. Cockpit, side doors, 16 jump seats, a 12-crate hold, 9-wide rear ramp. */
+/**
+ * The balanced hauler: 21 wide x 34 long, nose at the top. A flight deck behind its own bulkhead (canopy, three stations, instruments),
+ * a continuous passenger seat line down both hulls to the stern, and a hazard-framed hold between them (28 slots: 8 large, 8 medium,
+ * 12 small, loader lane down the middle) opening onto the 9-wide rear ramp, flanked by four main thrusters.
+ */
 function shipDeck(): Blueprint {
   const W = 21, H = 34;
   const hw = (y: number) => (y < 7 ? 4 + y * 1.1 : y >= 30 ? 10.5 - (y - 29) * 1.4 : 10.5);
   const c = new Canvas(W, H, (x, y) => Math.abs(x + 0.5 - W / 2) <= hw(y));
-  c.pts("n", [7, 1], [13, 1]).put(10, 1, "C");                                      // nav + pilot consoles at the nose
-  for (const y of [11, 12, 13, 14]) c.fill(1, y, 2, y, "~").fill(18, y, 19, y, "~");  // jump seats along both walls (16)
-  for (const y of [18, 21, 24]) for (const x of [4, 8, 12, 16]) c.put(x, y, ";");   // crate slots (12)
+  // flight deck: bulkhead with a 3-wide door, stations, instrument racks
+  c.fill(0, 7, 8, 7, "#").fill(12, 7, 20, 7, "#");
+  c.pts("n", [8, 1], [12, 1]).put(10, 1, "C").pts("@", [6, 3], [14, 3], [5, 5], [15, 5]).put(10, 4, "O");
+  // passenger line: shoulder-bar seats down both hulls to the stern
+  c.vline(0, 11, 28, "~").vline(20, 11, 28, "~");
+  // hold: hazard frame, loader lane, slots mirrored about the lane
+  c.hline(2, 18, 10, "h").vline(2, 10, 30, "h").vline(18, 10, 30, "h").hline(3, 5, 30, "h").hline(15, 17, 30, "h");
+  c.vline(10, 11, 29, "=");
+  for (const [x0, x1] of [[3, 8], [12, 17]]) {
+    const L = (x: number, y: number) => c.put(x, y, "1").put(x + 1, y, "2").put(x, y + 1, "3").put(x + 1, y + 1, "4");
+    const M = (x: number, y: number) => c.put(x, y, "<").put(x + 1, y, ">");
+    const xs = x0 === 3 ? [3, 6] : [12, 15];
+    for (const x of xs) { L(x, 12); L(x, 16); M(x, 20); M(x, 22); }
+    for (const y of [25, 27]) for (let x = x0; x <= x1; x += 2) c.put(x, y, ";");
+  }
   for (const y of [31, 32, 33]) c.fill(6, y, 14, y, ",");                            // rear ramp
+  for (const [x, y] of [[3, 31], [4, 32], [17, 31], [16, 32]]) c.put(x, y, "!");     // four main thrusters on the stern edge, two each side of the ramp
   const bp = c.done();
   const g = bp.grid.map((r) => r.split(""));
-  for (const y of [8, 9]) { g[y + 1][0] = "A"; g[y + 1][W + 1] = "A"; }               // side boarding doors
+  const ring = (x: number, y: number, ch: string) => { if (g[y + 1][x + 1] === " ") g[y + 1][x + 1] = ch; };
+  for (const y of [8, 9]) { g[y + 1][0] = "A"; g[y + 1][W + 1] = "A"; }               // side boarding doors, just aft of the flight deck
   for (let x = 6; x <= 14; x++) if (g[H + 1][x + 1] !== "d") g[H + 1][x + 1] = "A";   // stern airlocks line up with the dock
+  for (const [x, y] of [[3, 31], [4, 32], [17, 31], [16, 32]]) ring(x, y + 1, "}");   // nozzle mouths in the stern wall behind each thruster
+  for (let x = 7; x <= 13; x++) g[0][x + 1] = "[";                                    // canopy
+  for (const y of [2, 3, 4, 5]) for (const side of [-1, 1]) {                         // flank viewports on the swept cockpit hull
+    const x = side < 0 ? g[y + 1].findIndex((ch) => ch !== " ") - 1 : g[y + 1].length - 1 - [...g[y + 1]].reverse().findIndex((ch) => ch !== " ") + 1;
+    if (g[y + 1][x] === " " || g[y + 1][x] === "#") g[y + 1][x] = "]";
+  }
+  for (let y = 12; y <= 27; y += 3) { ring(-1, y, "("); ring(W, y, "("); }            // portholes beside the seat line
   return { ...bp, grid: g.map((r) => r.join("")) };
 }
 
