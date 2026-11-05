@@ -11,6 +11,7 @@ import { Camera } from "./render/camera";
 import { Tracks } from "./render/interp";
 import { CharLayer } from "./render/characters";
 import { buildTileCanvas, canvasTexture, characterTextures, TILE } from "./render/tiles";
+import { nextStop, WheelStepper } from "./render/zoomsteps";
 import { LightPass, expectedPixel } from "./render/lights/pass";
 import { lightBudget } from "./render/lights/budget";
 import { Pda } from "./ui/pda";
@@ -144,7 +145,8 @@ async function boot() {
   const ptrs = new Map<number, { x: number; y: number }>();
   let pinch = 0;
   const cv = app.canvas;
-  cv.addEventListener("wheel", (e) => { e.preventDefault(); cam.zoomAtSmooth(e.offsetX, e.offsetY, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
+  const wheel = new WheelStepper();   // the wheel snaps between the defined zoom stops, aimed at the screen centre (the reticle)
+  cv.addEventListener("wheel", (e) => { e.preventDefault(); const dir = wheel.feed(e.deltaMode === 1 ? e.deltaY * 40 : e.deltaY, performance.now()); if (dir) { followShip = false; cam.zoomAtSmooth(app.screen.width / 2, app.screen.height / 2, nextStop(cam.targetScale, dir) / cam.targetScale); } }, { passive: false });
   let down = { x: 0, y: 0, moved: 0 }; let vel = { x: 0, y: 0, t: 0 };
   cv.addEventListener("pointerdown", (e) => { followShip = false; cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.offsetX, y: e.offsetY }); pinch = 0; down = { x: e.offsetX, y: e.offsetY, moved: 0 }; vel = { x: 0, y: 0, t: 0 }; cam.fling(0, 0); });
   cv.addEventListener("pointerup", (e) => {
