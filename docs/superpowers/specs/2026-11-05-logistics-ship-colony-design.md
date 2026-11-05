@@ -20,13 +20,40 @@ Everything is tangible. People never pop in on the station: new followers appear
 ## One world, how it stays feasible
 A flat grid out to the planet (~900 tiles) would be about a million tiles, so the single world is stored as **sparse chunks** (e.g. 32x32, allocated only where something exists; the void between is empty). Static places (station, outpost) are chunk sets at fixed positions. The ship is a **rigid body**: its interior is its own chunk set with a local-to-world transform, and a character aboard keeps ship-local coordinates (so walking inside a flying ship is stable). Boarding is just stepping across the ramp edge from world coordinates into ship-local ones. Pathing treats the docked ship as part of the walkable world; in flight, it is a closed room.
 
-## Ship (one deck, first design)
-Cargo hauler, about a quarter of the station in footprint. Orange with black accents (Supply colours). Reference: the uploaded Lakon Type 6 deck plan (symmetrical, cargo flanking a central spine).
-- **Front:** cockpit, pilot seat + nav console. The pilot is an employee with quarters on the station.
-- **Just behind the cockpit:** two side boarding doors (left and right) with short boarding corridors; passengers also use them.
-- **Middle:** passenger bench seats along the walls, central cargo hold with a grid of crate slots and floor rails.
-- **Rear:** huge ramp doors that open on landing (3 panels, ramp tiles are the portal).
-- Proposed size: hull ~31 x 46 tiles, interior ~21 x 34. Engines/thrusters are exterior sprites only.
+## Ship (one deck) - decided 2026-11-05: "Balanced hauler"
+Cargo hauler, about a quarter of the station in footprint, orange with black accents (Supply colours). Reference: the Lakon Type 6 deck plan. Nose at the top, rear ramp at the bottom:
+
+```
+        ###########
+      ##.N..N..N.N.##          P pilot   c copilot   N nav consoles
+     #..P.......c...#          D>  side doors (two, left and right, just behind the cockpit)
+     #...............#         b   jump seats (16)
+     ##......s......##         [x] crate slots (12)
+   D>#...............#<D       R   rear ramp doors (open on landing)
+   D>#...............#<D
+     #...............#
+     #.bb.........bb.#
+     #.bb.........bb.#
+     #.bb.........bb.#
+     #.bb.........bb.#
+     #...............#
+     #.[x][x][x][x].#
+     #.[x][x][x][x].#
+     #.[x][x][x][x].#
+     #...............#
+     #...............#
+      #.............#
+      ##.RRRRRRRRR.##
+       #.RRRRRRRRR.#
+```
+Engines/thrusters are exterior sprites only. Footprint ~31 x 46 including hull, interior ~21 x 34.
+
+## Decisions for the dock slice (agreed 2026-11-05)
+- **Layout:** the balanced hauler above.
+- **Dock site:** the hull edge facing the home planet (planet is to the lower left of the station). The ship sits nose-out with its rear ramp toward the station. The map grows (160 -> 220 tiles) so the pad fits.
+- **Cargo:** both. Crew carry small crates by hand; a cargo loader machine moves bulk stacks. Supply crew operate both.
+- **Pilot:** a new **Flight** department with its own colour, a post in the cockpit, quarters on the station, a shift tied to the flight schedule.
+- **Slice 1 scope:** the ship is stamped into the station map at the dock pad, docked and walkable (stamping reuses the room machinery, so jobs, pathing and furniture just work). Boarding, loading and unloading work. Flight comes next; at that point the ship's interior becomes a moving rigid body with ship-local coordinates.
 
 ## Ship behaviour
 State machine: `Docked(open) -> Closing -> Undock -> Cruise -> Approach -> Land -> Docked(open at outpost)`, then the same way back. Real positions in world space, eased acceleration, nose points along travel. Schedule runs on the 24h clock; the ship loads cargo when the station demands it, plus people. The pilot sits in the cockpit for the whole flight; between flights he lives a normal shift/sleep life.
