@@ -87,3 +87,16 @@ describe("rear ramp tile", () => {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) expect(key(px(im, x, y)), `${x},${y}`).toBe((x + y) % 8 < 4 ? A : B);
   });
 });
+
+describe("pad beacon", () => {
+  it("is a small mast with a lit amber lamp on top, transparent around it, with a base shadow", async () => {
+    const { EQUIPMENT } = await import("./equipment");
+    const im = EQUIPMENT["prop:beacon"](), AMB = key({ r: 0xff, g: 0xb0, b: 0x2e });
+    let lamp = 0, solid = 0;
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const p = px(im, x, y); if (p.a) solid++; if (p.a && key(p) === AMB) lamp++; }
+    expect(lamp).toBeGreaterThanOrEqual(2);
+    expect(solid).toBeGreaterThan(20);
+    expect(solid).toBeLessThan(120);
+    expect(px(im, 0, 0).a).toBe(0);
+  });
+});
