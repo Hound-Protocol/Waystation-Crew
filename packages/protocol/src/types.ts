@@ -31,7 +31,9 @@ export interface Profile {
 /** The cargo ship's deck as a chunk of its own (local tile coordinates); `berth` is where it parks in the station map. */
 export interface ShipChunkSnap { w: number; h: number; tiles: number[]; furniture: FurnitureSnap[]; rooms: RoomSnap[]; deco: DecoSnap[]; floors: number[]; berth: { x: number; y: number; w: number; h: number } }
 
+/** The reactor and the power grid, for the station card, the lights and the reactor room. */
+export interface PowerSnap { status: "offline" | "starting" | "running" | "scram"; output: number; demand: number; battery: number; fuel: number; fuelStore: number; temp: number; field: number; coolant: number; feed: number; wear: number; supplyLevel: number; doorsPowered: boolean; lifeSupportDown: boolean }
 /** Station-wide numbers for the overview card, refreshed every few seconds. */
-export interface StatsSnap { needs: { hunger: number; energy: number; social: number; hygiene: number; fun: number }; lamps: number; lightable: number; dark: number; orders: number; built: number; rooms: number }
+export interface StatsSnap { power: PowerSnap; needs: { hunger: number; energy: number; social: number; hygiene: number; fun: number }; lamps: number; lightable: number; dark: number; orders: number; built: number; rooms: number }
 /** The cargo ship's schedule state: `slip` ticks late; `holding` while it waits at the door for its pilots. */
 export interface ShipStatus { slip: number; holding: boolean; /** crew locked aboard for the trip */ aboard: number }

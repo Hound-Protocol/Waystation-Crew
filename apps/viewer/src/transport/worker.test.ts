@@ -140,4 +140,14 @@ describe("tasks reach the viewer", () => {
     for (let i = 0; i < 100; i++) { const d = host.advanceReal(1); if (d) { total++; if (d.stats) withStats++; } }
     expect(total).toBeGreaterThan(0); expect(withStats).toBeGreaterThanOrEqual(3); expect(withStats).toBeLessThan(total);   // about every 30 ticks, not every delta
   });
+  it("carries the power block with the snapshot, and a reactor status change reaches the viewer at once", async () => {
+    const host = new SimHost({ seed: 1, population: 20, budgetMs: Infinity });
+    const snap = host.snapshot() as Extract<ServerMsg, { t: "snapshot" }>;
+    expect(snap.stats?.power.status).toBe("running");
+    host.advanceReal(1); host.advanceReal(1);                                         // the stats cadence is now mid-interval
+    host.world.power.reactor.status = "scram";
+    let seen = false;
+    for (let i = 0; i < 3 && !seen; i++) { const d = host.advanceReal(1); if (d?.stats?.power.status === "scram") seen = true; }
+    expect(seen).toBe(true);
+  });
 });

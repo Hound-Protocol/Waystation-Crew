@@ -30,4 +30,10 @@ describe("stationStats", () => {
     const after = stationStats(x);
     expect(after.built).toBeGreaterThan(0); expect(after.lamps).toBeGreaterThan(before.lamps); expect(after.dark).toBeLessThanOrEqual(before.dark);
   });
+  it("reports the reactor and grid", () => {
+    const w = createWorld(7), st = stationStats(w);
+    expect(st.power.status).toBe("running"); expect(st.power.battery).toBe(1); expect(st.power.doorsPowered).toBe(true);
+    for (const k of ["output", "demand", "fuel", "fuelStore", "temp", "field", "coolant", "feed", "wear", "supplyLevel"] as const) { expect(st.power[k]).toBeGreaterThanOrEqual(0); expect(Number.isFinite(st.power[k])).toBe(true); }
+    w.power.reactor.status = "scram"; expect(stationStats(w).power.status).toBe("scram");
+  });
 });

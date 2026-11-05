@@ -44,7 +44,13 @@ export class SimHost {
   }
   private statsAt = -Infinity;
   /** station stats ride on a delta about every 30 sim ticks, not on every one */
-  private statsIfDue(): { stats?: StatsSnap } { if (this.world.tick - this.statsAt < 30) return {}; this.statsAt = this.world.tick; return { stats: stationStats(this.world) }; }
+  private powerStatus = "";
+  /** a reactor status change (scram, restart) is sent at once rather than waiting for the cadence */
+  private statsIfDue(): { stats?: StatsSnap } {
+    const st = this.world.power.reactor.status, changed = st !== this.powerStatus;
+    if (!changed && this.world.tick - this.statsAt < 30) return {};
+    this.powerStatus = st; this.statsAt = this.world.tick; return { stats: stationStats(this.world) };
+  }
   private shipStatus() { return { slip: this.world.ship.slip, holding: this.world.ship.holding, aboard: this.world.ship.crew.length }; }
 
   snapshot(): ServerMsg {
