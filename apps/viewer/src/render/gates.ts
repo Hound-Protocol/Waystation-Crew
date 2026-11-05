@@ -2,7 +2,8 @@ import { Container, Graphics } from "pixi.js";
 import { TileKind } from "@wc/sim-core";
 import { TILE } from "./tiles";
 
-export interface Gate { x: number; y: number; w: number; h: number }
+/** `inner` is the side of the gateway that has floor behind it: 0 = the low side (left / above), 1 = the high side (right / below). */
+export interface Gate { x: number; y: number; w: number; h: number; inner: 0 | 1 }
 export interface Pt { x: number; y: number }
 
 /** Each connected run of airlock cells is one big gateway (its bounding rectangle), not a row of tiny doors. */
@@ -19,7 +20,11 @@ export function findGates(tiles: ArrayLike<number>, w: number, h: number): Gate[
         if (nx >= 0 && ny >= 0 && nx < w && ny < h && tiles[n] === TileKind.Airlock && !seen[n]) { seen[n] = 1; q.push(n); }
       }
     }
-    out.push({ x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 });
+    const vertical = y1 - y0 >= x1 - x0, solid = (x: number, y: number) => (x >= 0 && y >= 0 && x < w && y < h && tiles[y * w + x] !== TileKind.Void ? 1 : 0);
+    let low = 0, high = 0;
+    if (vertical) for (let y = y0; y <= y1; y++) { low += solid(x0 - 1, y); high += solid(x1 + 1, y); }
+    else for (let x = x0; x <= x1; x++) { low += solid(x, y0 - 1); high += solid(x, y1 + 1); }
+    out.push({ x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1, inner: high > low ? 1 : 0 });
   }
   return out;
 }
@@ -27,11 +32,12 @@ export function findGates(tiles: ArrayLike<number>, w: number, h: number): Gate[
 export interface Rect { x: number; y: number; w: number; h: number }
 export interface Beacon { x: number; y: number; end: 0 | 1 }
 
-/** Floor strips right in front of and right behind the door (across its travel direction), full width. */
-export function gateStrips(g: Gate): [Rect, Rect] {
+/** The one floor strip on the interior side of the door (across its travel direction), full width. Nothing is drawn on the open-space side. */
+export function gateStrips(g: Gate): Rect[] {
+  const hi = g.inner === 1;
   return g.h >= g.w
-    ? [{ x: g.x - 1, y: g.y, w: 1, h: g.h }, { x: g.x + g.w, y: g.y, w: 1, h: g.h }]
-    : [{ x: g.x, y: g.y - 1, w: g.w, h: 1 }, { x: g.x, y: g.y + g.h, w: g.w, h: 1 }];
+    ? [{ x: hi ? g.x + g.w : g.x - 1, y: g.y, w: 1, h: g.h }]
+    : [{ x: g.x, y: hi ? g.y + g.h : g.y - 1, w: g.w, h: 1 }];
 }
 
 /** Beacon mounts on the wall cells at both ends of the door's long axis, one per cell across it. */
@@ -72,8 +78,8 @@ export class GateLayer {
       const vertical = gate.h >= gate.w;
       for (const r of gateStrips(gate)) for (let i = 0; i < (vertical ? r.h : r.w); i++) {
         const px = (r.x + (vertical ? 0 : i)) * TILE, py = (r.y + (vertical ? i : 0)) * TILE;
-        if (vertical) { g.rect(px + 5, py, 6, TILE).fill(0x07080b); g.rect(px + 6, py, 4, TILE).fill(0x1b1e24); for (const y of [1, 6, 11]) g.rect(px + 7, py + y, 2, 4).fill(LED_OFF); }
-        else { g.rect(px, py + 5, TILE, 6).fill(0x07080b); g.rect(px, py + 6, TILE, 4).fill(0x1b1e24); for (const x of [1, 6, 11]) g.rect(px + x, py + 7, 4, 2).fill(LED_OFF); }
+        if (vertical) { g.rect(px + 6, py, 3, TILE).fill(0x07080b); g.rect(px + 7, py, 1, TILE).fill(0x1b1e24); for (const y of [1, 6, 11]) g.rect(px + 7, py + y, 1, 4).fill(LED_OFF); }
+        else { g.rect(px, py + 6, TILE, 3).fill(0x07080b); g.rect(px, py + 7, TILE, 1).fill(0x1b1e24); for (const x of [1, 6, 11]) g.rect(px + x, py + 7, 4, 1).fill(LED_OFF); }
       }
       for (const b of gateBeacons(gate)) {
         const x = b.x * TILE, y = b.y * TILE;
@@ -89,13 +95,13 @@ export class GateLayer {
     if (!moving) return;
     for (const gate of this.gates) {
       const vertical = gate.h >= gate.w;
-      for (const [side, r] of gateStrips(gate).entries()) {
-        if (!strobe(time, side as 0 | 1)) continue;                                               // the LED strip flashes as one
+      for (const r of gateStrips(gate)) {
+        if (!strobe(time, 0)) continue;                                               // the LED strip flashes as one; with a single strip per gate it always takes side 0
         for (let i = 0; i < (vertical ? r.h : r.w); i++) {
           const px = (r.x + (vertical ? 0 : i)) * TILE, py = (r.y + (vertical ? i : 0)) * TILE;
           for (const o of [1, 6, 11]) {
-            if (vertical) { g.rect(px + 7, py + o, 2, 4).fill({ color: 0xfff2b0, alpha: 1 }); g.rect(px + 4, py + o - 1, 8, 6).fill({ color: 0xffb020, alpha: 0.22 }); }
-            else { g.rect(px + o, py + 7, 4, 2).fill({ color: 0xfff2b0, alpha: 1 }); g.rect(px + o - 1, py + 4, 6, 8).fill({ color: 0xffb020, alpha: 0.22 }); }
+            if (vertical) { g.rect(px + 7, py + o, 1, 4).fill({ color: 0xfff2b0, alpha: 1 }); g.rect(px + 5, py + o - 1, 5, 6).fill({ color: 0xffb020, alpha: 0.22 }); }
+            else { g.rect(px + o, py + 7, 4, 1).fill({ color: 0xfff2b0, alpha: 1 }); g.rect(px + o - 1, py + 5, 6, 5).fill({ color: 0xffb020, alpha: 0.22 }); }
           }
         }
       }
