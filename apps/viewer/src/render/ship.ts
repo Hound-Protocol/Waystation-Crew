@@ -1,7 +1,9 @@
 import { Container, Graphics } from "pixi.js";
 import { TileKind } from "@wc/sim-core";
 import { TILE } from "./tiles";
-import type { ShipState } from "./shipstate";
+import type { ShipPose } from "@wc/sim-core";
+
+type ShipState = Pick<ShipPose, "bars" | "thrust" | "glow">;
 
 export interface Seat { x: number; y: number; dir: 1 | -1 }                        // dir: +1 faces south (backrest on the north edge), -1 faces north
 /** A big external engine, 5x2 tiles, exhaust to the east. (x, y): top-left tile. strut: +1 when the hull / next engine lies at +y. run: free void tiles east of the bell. */

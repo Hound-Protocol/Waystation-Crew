@@ -18,3 +18,5 @@ export * from "./station/growth";
 export { growStation, STARTER_CREW } from "./station/layout";
 export * from "./station/blueprint";
 export * from "./station/pad";
+export * from "./ship/timeline";
+export * from "./ship/pose";

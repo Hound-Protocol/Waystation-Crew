@@ -1,8 +1,8 @@
-import type { Profile, CharSnap, Clock, DecoSnap, DevCmd, FurnitureSnap, Move, RoomSnap, StateChange, Viewport } from "./types";
+import type { ShipChunkSnap, Profile, CharSnap, Clock, DecoSnap, DevCmd, FurnitureSnap, Move, RoomSnap, StateChange, Viewport } from "./types";
 
 export type ClientMsg = { t: "subscribe"; viewport: Viewport } | { t: "devCmd"; cmd: DevCmd } | { t: "inspect"; id: number | null };
 export type ServerMsg =
-  | { t: "snapshot"; tick: number; w: number; h: number; tiles: number[]; furniture: FurnitureSnap[]; rooms: RoomSnap[]; chars: CharSnap[]; deco?: DecoSnap[]; floors?: number[] }
+  | { t: "snapshot"; tick: number; w: number; h: number; tiles: number[]; furniture: FurnitureSnap[]; rooms: RoomSnap[]; chars: CharSnap[]; deco?: DecoSnap[]; floors?: number[]; ship?: ShipChunkSnap }
   | { t: "station"; tick: number; w: number; h: number; tiles: number[]; furniture: FurnitureSnap[]; rooms: RoomSnap[]; deco?: DecoSnap[]; floors?: number[] }
   | { t: "delta"; tick: number; moves: Move[]; states: StateChange[]; clock: Clock }
   | { t: "inspect"; id: number; tick: number; lines: string[]; profile?: Profile | null };

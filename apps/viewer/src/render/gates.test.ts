@@ -4,17 +4,24 @@ import { findGates, gateStrips, gateBeacons, strobe, beaconLevel } from "./gates
 
 describe("gateways: runs of airlock cells become one big door", () => {
   const st = buildStarterStation(1);
-  const tiles: number[] = []; for (let y = 0; y < st.map.h; y++) for (let x = 0; x < st.map.w; x++) tiles.push(st.map.get(x, y));
-  const gates = findGates(tiles, st.map.w, st.map.h);
-  it("finds one 2x9 gateway between the ship's ramp and Arrivals, plus a 1x2 boarding gate on each hull", () => {
+  const flat = (m: { w: number; h: number; get(x: number, y: number): TileKind }) => { const t: number[] = []; for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) t.push(m.get(x, y)); return t; };
+  const stationTiles = flat(st.map), shipTiles = flat(st.ship!.map);
+  it("finds one 1x9 gateway on the station: the Arrivals airlocks facing the berth", () => {
+    const gates = findGates(stationTiles, st.map.w, st.map.h);
+    expect(gates.length).toBe(1);
+    expect(gates[0]).toMatchObject({ w: 1, h: 9 });
+  });
+  it("finds a 1x9 stern gateway on the ship, plus 1x2 boarding gates on its hull", () => {
+    const gates = findGates(shipTiles, st.ship!.map.w, st.ship!.map.h);
     const big = gates.filter((g) => Math.max(g.w, g.h) >= 9);
-    expect(big.length).toBe(1);
-    expect(big[0].h).toBe(9); expect(big[0].w).toBe(2);
+    expect(big.length).toBe(1); expect(big[0]).toMatchObject({ x: 35, w: 1, h: 9 });
     expect(gates.filter((g) => g.w * g.h === 2).length).toBeGreaterThanOrEqual(2);
   });
   it("covers every airlock cell exactly once", () => {
-    let cells = 0; for (const t of tiles) if (t === TileKind.Airlock) cells++;
-    expect(gates.reduce((n, g) => n + g.w * g.h, 0)).toBe(cells);
+    for (const [tiles, m] of [[stationTiles, st.map], [shipTiles, st.ship!.map]] as const) {
+      let cells = 0; for (const t of tiles) if (t === TileKind.Airlock) cells++;
+      expect(findGates(tiles, m.w, m.h).reduce((n, g) => n + g.w * g.h, 0)).toBe(cells);
+    }
   });
 });
 

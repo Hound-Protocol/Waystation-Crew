@@ -38,3 +38,12 @@ Tests: timeline sums and cadence (600-tick legs, 300 wait, one trip per hour), p
 
 ## Out of scope
 Passenger boarding and cargo (slice 4), call-a-ship button and any manual trigger (slice 3), planet surface detail along the descent.
+
+## Slice 2a: as built (rulings)
+- The pose is a pure function of the tick (`sim-core/ship/timeline.ts`, `pose.ts`), so 2a streams no `ShipSnap`: the snapshot carries the ship chunk once and the viewer evaluates the pose at its render tick. The state (`slip`) arrives with 2b.
+- The cycle starts at docking and is shifted 180 ticks, so the sim begins docked with the gate open; lift-off is at tick 1560 of each hour.
+- The ship chunk is `Station.ship` (`ShipChunk`: the deck in local 36x23 coordinates plus its `berth`). The berth cells in the station map are void marked `BERTH` in `floors`, so growth never builds on them and the hull sealer never fills them.
+- The return flight turns about 133 degrees (nose toward the station), the outward flight about 47; both ease in and out.
+- Flight-department posts disappear until 2b (the cockpit consoles live in the ship chunk, unreachable by crew).
+- The Arrivals gate column is not yet made unwalkable while the ship is away (nobody uses it in 2a); portals in 2b decide that.
+- Dev panel: "go to station", "go to pad", "follow ship".

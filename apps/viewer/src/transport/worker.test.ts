@@ -27,6 +27,17 @@ describe("worker transport", () => {
     expect(got[0].t).toBe("snapshot");
     if (got[0].t === "snapshot") { expect(got[0].chars.length).toBe(20); expect(got[0].w).toBe(STATION_W); }
   });
+  it("the snapshot carries the ship's deck as a chunk of its own, with its berth in the station map", async () => {
+    const { t, got, host } = collect();
+    t.send({ t: "subscribe", viewport: { x: 0, y: 0, w: 60, h: 40, zoom: 3 } });
+    await Promise.resolve();
+    const m = got[0]; if (m.t !== "snapshot") throw new Error("no snapshot");
+    const sh = m.ship!, src = host.world.station.ship!;
+    expect(sh).toBeTruthy();
+    expect([sh.w, sh.h]).toEqual([36, 23]); expect(sh.tiles.length).toBe(36 * 23);
+    expect(sh.berth).toEqual(src.berth);
+    expect(sh.rooms.map((r) => r.name)).toEqual(["Cargo Ship"]); expect(sh.deco.length).toBe(src.deco!.length); expect(sh.floors.length).toBe(36 * 23);
+  });
   it("advancing real time yields deltas", async () => {
     const { t, got, host } = collect();
     t.send({ t: "subscribe", viewport: { x: 0, y: 0, w: 60, h: 40, zoom: 3 } });

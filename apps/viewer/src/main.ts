@@ -1,9 +1,9 @@
 import { ShipLayer, shipFixtures } from "./render/ship";
-import { shipState } from "./render/shipstate";
+import { shipPlacement, type Rect } from "./render/shipbody";
 import { GateLayer } from "./render/gates";
 import { PadLayer, padOrigin } from "./render/padlayer";
 import type { TileKind } from "@wc/sim-core";
-import { PAD } from "@wc/sim-core";
+import { PAD, shipPose } from "@wc/sim-core";
 import { Application, Container, Graphics, Sprite } from "pixi.js";
 import { STATION_NAME, type ServerMsg, type SimTransport } from "@wc/protocol";
 import { createWorkerTransport } from "./transport/worker";
@@ -40,7 +40,10 @@ async function boot() {
   const doorLayer = new DoorLayer(texs);
   const solar = new SolarLayer();
   const shipLayer = new ShipLayer(), gateLayer = new GateLayer(), padLayer = new PadLayer();
-  world.addChild(solar.root, padLayer.root, mapLayer, shipLayer.root, gateLayer.root, doorLayer.root, chars.root);
+  // the ship: its baked deck, its animated parts and its own gates, all in deck-local coordinates, moved and turned as one body
+  const shipBody = new Container(), shipBake = new Container(), shipGates = new GateLayer();
+  shipBody.addChild(shipBake, shipLayer.root, shipGates.root); shipBody.visible = false;
+  world.addChild(solar.root, padLayer.root, mapLayer, gateLayer.root, shipBody, doorLayer.root, chars.root);
   const space = new SpaceLayer();
   app.stage.addChild(space.root, world);
   world.alpha = 0; // fades in with the first snapshot
@@ -56,7 +59,8 @@ async function boot() {
   footer.textContent = `${STATION_NAME} · build ${BUILD}`;
 
   const fades: Sprite[] = [];
-  let shipDebug: ReturnType<typeof shipState> | null = null;   // dev hook: freeze the ship routine at a tick of its cycle
+  let shipHold: number | null = null;   // dev hook: freeze the ship at a tick of its round trip
+  let berth: Rect | null = null, followShip = false, shipAt = { x: 0, y: 0 };
   const transport: SimTransport = createWorkerTransport();
   const select = (id: number | null) => {
     selected = id; follow = id !== null; if (id === null) markerPos = null;
@@ -67,6 +71,8 @@ async function boot() {
   const pda = new Pda(() => select(null));
   const panel = new DevPanel({ send: (m) => transport.send(m), onSelect: (id) => select(id), onGoto: (where) => {
     if (selected !== null) select(null);
+    if (where === "ship") { followShip = !followShip; if (followShip) cam.zoomAtSmooth(app.screen.width / 2, app.screen.height / 2, 6 / cam.targetScale); return; }
+    followShip = false;
     if (where === "pad") cam.glideTo(padOrigin().x + PAD.w / 2, padOrigin().y + PAD.h / 2, 10, app.screen.width, app.screen.height);
     else cam.glideTo(mapW / 2, mapH / 2, 10, app.screen.width, app.screen.height);
   } });
@@ -75,8 +81,15 @@ async function boot() {
       mapLayer.removeChildren();
       mapLayer.addChild(new Sprite(canvasTexture(buildTileCanvas({ w: m.w, h: m.h, tiles: m.tiles, rooms: m.rooms, furniture: m.furniture, deco: m.deco, floors: m.floors }))));
       doorLayer.reset(m.tiles, m.w, m.h, (x, y) => doorIsVertical(m.tiles, m.w, m.h, x, y));
-      shipLayer.reset(shipFixtures(m.deco ?? [], (x, y) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? 0 : m.tiles[y * m.w + x]) as TileKind, m.rooms));
       gateLayer.reset(m.tiles, m.w, m.h);
+      if (m.ship) {
+        const sh = m.ship;
+        shipBake.removeChildren().forEach((c) => c.destroy());
+        shipBake.addChild(new Sprite(canvasTexture(buildTileCanvas({ w: sh.w, h: sh.h, tiles: sh.tiles, rooms: sh.rooms, furniture: sh.furniture, deco: sh.deco, floors: sh.floors }))));
+        shipLayer.reset(shipFixtures(sh.deco, (x, y) => (x < 0 || y < 0 || x >= sh.w || y >= sh.h ? 0 : sh.tiles[y * sh.w + x]) as TileKind, sh.rooms));
+        shipGates.reset(sh.tiles, sh.w, sh.h);
+        shipBody.pivot.set((sh.w * TILE) / 2, (sh.h * TILE) / 2); berth = sh.berth; shipBody.visible = true;
+      }
       mapW = m.w; mapH = m.h; crew = m.chars.length;
       chars.reset(m.chars); tracks.reset(m.chars); panel.setChars(m.chars); if (selected !== null) select(null);
       renderTick = latestTick = m.tick; clock.reset(m.tick, speed);
@@ -90,7 +103,6 @@ async function boot() {
       const next = new Sprite(canvasTexture(buildTileCanvas({ w: m.w, h: m.h, tiles: m.tiles, rooms: m.rooms, furniture: m.furniture, deco: m.deco, floors: m.floors })));
       next.alpha = 0; mapLayer.addChild(next); fades.push(next);
       doorLayer.reset(m.tiles, m.w, m.h, (x, y) => doorIsVertical(m.tiles, m.w, m.h, x, y));
-      shipLayer.reset(shipFixtures(m.deco ?? [], (x, y) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? 0 : m.tiles[y * m.w + x]) as TileKind, m.rooms));
       gateLayer.reset(m.tiles, m.w, m.h);
       mapW = m.w; mapH = m.h;
     } else if (m.t === "delta") {
@@ -107,7 +119,7 @@ async function boot() {
   const cv = app.canvas;
   cv.addEventListener("wheel", (e) => { e.preventDefault(); cam.zoomAtSmooth(e.offsetX, e.offsetY, Math.exp(-e.deltaY * 0.0015)); }, { passive: false });
   let down = { x: 0, y: 0, moved: 0 }; let vel = { x: 0, y: 0, t: 0 };
-  cv.addEventListener("pointerdown", (e) => { cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.offsetX, y: e.offsetY }); pinch = 0; down = { x: e.offsetX, y: e.offsetY, moved: 0 }; vel = { x: 0, y: 0, t: 0 }; cam.fling(0, 0); });
+  cv.addEventListener("pointerdown", (e) => { followShip = false; cv.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.offsetX, y: e.offsetY }); pinch = 0; down = { x: e.offsetX, y: e.offsetY, moved: 0 }; vel = { x: 0, y: 0, t: 0 }; cam.fling(0, 0); });
   cv.addEventListener("pointerup", (e) => {
     ptrs.delete(e.pointerId); pinch = 0;
     if (down.moved >= 5 && ptrs.size === 0 && performance.now() - vel.t < 80) cam.fling(vel.x, vel.y);
@@ -143,8 +155,17 @@ async function boot() {
     world.alpha = worldA * worldA * (3 - 2 * worldA);
     world.scale.set(cam.scale / TILE); world.position.set(cam.tx, cam.ty);
     solar.update(dt, renderTick, cam.scale);
-    padLayer.update(performance.now() / 1000, cam.scale, { gate: 1, gateMoving: false });   // stub gate stays open until the ship is a real body (slice 2)
-    shipLayer.update(shipDebug ?? shipState(renderTick), performance.now() / 1000);
+    const time = performance.now() / 1000, pose = shipPose(shipHold ?? renderTick);
+    if (berth) {
+      const pad = padOrigin(), padBerth = { x: pad.x + PAD.berth.x, y: pad.y + PAD.berth.y, w: PAD.berth.w, h: PAD.berth.h };
+      const pl = shipPlacement(pose, berth, padBerth);
+      shipBody.position.set(pl.x * TILE, pl.y * TILE); shipBody.rotation = pl.rot; shipAt = pl;
+      if (followShip) cam.followToward(pl.x, pl.y, app.screen.width, app.screen.height, dt);
+    }
+    shipLayer.update(pose, time);
+    const aboard = pose.at === "station" ? pose.stationGate : pose.at === "pad" ? pose.padGate : { v: 0, moving: false };   // the ship's gates follow the dock it sits at
+    shipGates.update(time, { gate: aboard.v, gateMoving: aboard.moving });
+    padLayer.update(time, cam.scale, { gate: pose.padGate.v, gateMoving: pose.padGate.moving });
     space.update(dt, cam.tx, cam.ty, app.screen.width, app.screen.height);
     if (selected !== null) {
       const p = tracks.positionAt(selected, renderTick);
@@ -152,13 +173,12 @@ async function boot() {
     }
     markerA += ((selected !== null ? 1 : 0) - markerA) * (1 - Math.exp(-dt * 14));
     marker.alpha = markerA < 0.01 ? 0 : markerA;
-    const ship = shipDebug ?? shipState(renderTick);
-    gateLayer.update(performance.now() / 1000, ship);
+    gateLayer.update(time, { gate: pose.stationGate.v, gateMoving: pose.stationGate.moving });
     doorLayer.update(dt, chars.ids, (id) => tracks.positionAt(id, renderTick));
     chars.update(dt, renderTick, tracks, cam, app.screen.width, app.screen.height);
     const d = Math.floor((latestTick + 21600) / 86400) + 1, h = Math.floor(((latestTick / 3600) + 6) % 24), m = Math.floor((latestTick / 60) % 60);
     hud.innerHTML = `<b>${STATION_NAME}</b> · day ${d} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} · crew ${crew} · Z${zoomLevel(cam.scale)}${paused ? " · paused" : ""}${speed !== 1 ? ` · ${speed}x` : ""}`;
   });
-  (window as unknown as { __wc: unknown }).__wc = { cam, transport, holdShip: (tick: number | null) => { shipDebug = tick === null ? null : shipState(tick); } };
+  (window as unknown as { __wc: unknown }).__wc = { cam, transport, holdShip: (tick: number | null) => { shipHold = tick; }, shipAt: () => shipAt };
 }
 boot().catch((e) => showError(`Could not start the renderer: ${e instanceof Error ? e.message : e}`));

@@ -3,7 +3,7 @@ import type { ClientMsg, CharSnap } from "@wc/protocol";
 const DEPTS = ["Command", "Engineering", "Medical", "Security", "Supply", "Service", "Flight"];
 const STATES = ["idle", "walking", "eating", "sleeping", "relaxing", "working"];
 
-export interface DevPanelOpts { send: (m: ClientMsg) => void; onSelect: (id: number) => void; onGoto?: (where: "pad" | "station") => void }
+export interface DevPanelOpts { send: (m: ClientMsg) => void; onSelect: (id: number) => void; onGoto?: (where: "pad" | "station" | "ship") => void }
 
 const CSS = `
 #devtoggle{position:fixed;right:8px;top:6px;z-index:11;background:#10151c;color:#4de1ff;border:1px solid #28445a;font:11px ui-monospace,monospace;padding:4px 8px;cursor:pointer}
@@ -29,7 +29,7 @@ export class DevPanel {
       <div class="row"><button data-a="pause">pause / play</button>${[1, 10, 60, 600].map((s) => `<button data-speed="${s}">${s}x</button>`).join("")}</div>
       <div class="row"><select data-f="dept">${DEPTS.map((d, i) => `<option value="${i}">${d}</option>`).join("")}</select>
         <input data-f="count" type="number" value="5" min="1" max="500" style="width:56px"><button data-a="spawn">spawn</button></div>
-      <div class="row"><button data-goto="station">go to station</button><button data-goto="pad">go to pad</button></div>
+      <div class="row"><button data-goto="station">go to station</button><button data-goto="pad">go to pad</button><button data-goto="ship">follow ship</button></div>
       <div class="row"><input data-f="seed" type="number" value="1" style="width:70px"><button data-a="reset">reset seed</button></div>
       <input data-f="search" placeholder="search crew…"><div class="list"></div><h4>Inspector</h4><pre>Select a character</pre>`;
     document.body.appendChild(this.el);
@@ -41,7 +41,7 @@ export class DevPanel {
     this.el.addEventListener("click", (e) => {
       const t = e.target as HTMLElement;
       const speed = t.getAttribute("data-speed"); if (speed) o.send({ t: "devCmd", cmd: { c: "speed", mult: +speed } });
-      const goto = t.getAttribute("data-goto"); if (goto) o.onGoto?.(goto as "pad" | "station");
+      const goto = t.getAttribute("data-goto"); if (goto) o.onGoto?.(goto as "pad" | "station" | "ship");
       const a = t.getAttribute("data-a");
       const val = (f: string) => +(this.el.querySelector(`[data-f="${f}"]`) as HTMLInputElement).value;
       if (a === "pause") o.send({ t: "devCmd", cmd: { c: "pause" } });

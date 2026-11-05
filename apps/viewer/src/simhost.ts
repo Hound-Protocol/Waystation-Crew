@@ -38,7 +38,9 @@ export class SimHost {
     const chars = [];
     for (let id = 0; id < c.count; id++)
       chars.push({ id, name: c.name(id), dept: c.dept[id], rank: c.rank[id], x: c.x[id], y: c.y[id], state: c.state[id], job: c.job[id] });
-    return { t: "snapshot", tick: w.tick, w: m.w, h: m.h, tiles: Array.from(m.tiles), furniture: w.station.furniture, rooms: w.station.rooms, chars, deco: w.station.deco ?? [], floors: w.station.floors ? Array.from(w.station.floors) : [] };
+    const sh = w.station.ship;
+    const ship = sh ? { w: sh.map.w, h: sh.map.h, tiles: Array.from(sh.map.tiles), furniture: sh.furniture, rooms: sh.rooms, deco: sh.deco ?? [], floors: sh.floors ? Array.from(sh.floors) : [], berth: sh.berth } : undefined;
+    return { t: "snapshot", tick: w.tick, w: m.w, h: m.h, tiles: Array.from(m.tiles), furniture: w.station.furniture, rooms: w.station.rooms, chars, deco: w.station.deco ?? [], floors: w.station.floors ? Array.from(w.station.floors) : [], ship };
   }
 
   /** Present only once per station growth: lets the viewer rebake and fade the new rooms in. */

@@ -24,3 +24,6 @@ export interface Profile {
   shiftNow: "day" | "swing" | "night";
   thoughts: string[];
 }
+
+/** The cargo ship's deck as a chunk of its own (local tile coordinates); `berth` is where it parks in the station map. */
+export interface ShipChunkSnap { w: number; h: number; tiles: number[]; furniture: FurnitureSnap[]; rooms: RoomSnap[]; deco: DecoSnap[]; floors: number[]; berth: { x: number; y: number; w: number; h: number } }
