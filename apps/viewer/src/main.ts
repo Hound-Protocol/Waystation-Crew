@@ -21,6 +21,7 @@ import { SolarLayer } from "./render/space/solar";
 import { SYSTEM_EXTENT, BODIES, SUN_RADIUS, stationFrame } from "./render/space/system";
 import { zoneRadius, overviewActive, footprintHit, footprintEdges, shipLocal, circleHit, pickTarget, type Grid, type Pt, type Target } from "./render/reticle";
 import { Outline, ReticleGlyph } from "./render/reticlelayer";
+import { StatusLayer } from "./render/statusicons";
 import { OverviewCard, overviewFor, type BodyInfo } from "./ui/overview";
 import { SpaceLayer } from "./render/space/layer";
 
@@ -38,7 +39,7 @@ async function boot() {
 
   const world = new Container();
   const mapLayer = new Container();
-  const chars = new CharLayer();
+  const chars = new CharLayer(), status = new StatusLayer();
   const texs = characterTextures();
   const doorLayer = new DoorLayer(texs);
   const solar = new SolarLayer();
@@ -46,7 +47,7 @@ async function boot() {
   // the ship: its baked deck, its animated parts and its own gates, all in deck-local coordinates, moved and turned as one body
   const shipBody = new Container(), shipBake = new Container(), shipGates = new GateLayer();
   shipBody.addChild(shipBake, shipLayer.root, shipGates.root); shipBody.visible = false;
-  world.addChild(solar.root, padLayer.root, mapLayer, gateLayer.root, shipBody, doorLayer.root, chars.root);
+  world.addChild(solar.root, padLayer.root, mapLayer, gateLayer.root, shipBody, doorLayer.root, chars.root, status.root);
   const space = new SpaceLayer();
   app.stage.addChild(space.root, world);
   const stationOutline = new Outline(), shipOutline = new Outline(), bodyOutline = new Outline(), glyph = new ReticleGlyph();
@@ -103,7 +104,7 @@ async function boot() {
       }
       if (m.shipStatus) { shipSlip = m.shipStatus.slip; shipHolding = m.shipStatus.holding; shipAboard = m.shipStatus.aboard; }
       mapW = m.w; mapH = m.h; crew = m.chars.length;
-      chars.reset(m.chars); tracks.reset(m.chars); panel.setChars(m.chars); if (selected !== null) select(null);
+      chars.reset(m.chars); status.reset(m.chars); tracks.reset(m.chars); panel.setChars(m.chars); if (selected !== null) select(null);
       renderTick = latestTick = m.tick; clock.reset(m.tick, speed);
       if (!fitted) {
         cam.fit(mapW, mapH, app.screen.width, app.screen.height);
@@ -120,6 +121,7 @@ async function boot() {
       mapW = m.w; mapH = m.h;
     } else if (m.t === "delta") {
       if (m.shipStatus) { shipSlip = m.shipStatus.slip; shipHolding = m.shipStatus.holding; shipAboard = m.shipStatus.aboard; }
+      for (const tc of m.tasks ?? []) status.setTask(tc.id, tc.task);
       tracks.apply(m.moves); tracks.prune(m.tick - 120); latestTick = m.tick; speed = m.clock.speed; paused = m.clock.paused;
       panel.updateStates(m.states); panel.setClock(paused);
     } else if (m.id === selected) { panel.setInspect(m.lines); if (m.profile) pda.update(m.profile); }
@@ -190,6 +192,7 @@ async function boot() {
     gateLayer.update(time, { gate: pose.stationGate.v, gateMoving: pose.stationGate.moving });
     doorLayer.update(dt, chars.ids, (id) => tracks.positionAt(id, renderTick));
     chars.update(dt, renderTick, tracks, cam, app.screen.width, app.screen.height);
+    status.place = chars.place; status.update(dt, renderTick, tracks, cam, app.screen.width, app.screen.height);
     const d = Math.floor((latestTick + 21600) / 86400) + 1, h = Math.floor(((latestTick / 3600) + 6) % 24), m = Math.floor((latestTick / 60) % 60);
     hud.innerHTML = `<b>${STATION_NAME}</b> · day ${d} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} · crew ${crew} · Z${zoomLevel(cam.scale)}${paused ? " · paused" : ""}${shipHolding ? " · ship waiting for pilots" : ""}${speed !== 1 ? ` · ${speed}x` : ""}`;
     const level = zoomLevel(cam.scale), active = fitted && overviewActive(level);
@@ -211,6 +214,6 @@ async function boot() {
     } else card.update(dt, null);
     stationOutline.update(dt, hit?.id === "station"); shipOutline.update(dt, hit?.id === "ship"); bodyOutline.update(dt, !!hit && hit.id.startsWith("body:"));
   });
-  (window as unknown as { __wc: unknown }).__wc = { cam, transport, holdShip: (tick: number | null) => { shipHold = tick; }, shipAt: () => shipAt };
+  (window as unknown as { __wc: unknown }).__wc = { cam, transport, holdShip: (tick: number | null) => { shipHold = tick; }, shipAt: () => shipAt, focus: (kind: number, nth = 0) => { const id = status.find(kind, nth); if (id === null) return null; const p0 = tracks.positionAt(id, renderTick); if (!p0) return null; const p = chars.place ? chars.place(p0.x, p0.y) : p0; cam.centerOn(p.x + 0.5, p.y + 0.5, app.screen.width, app.screen.height); return id; } };
 }
 boot().catch((e) => showError(`Could not start the renderer: ${e instanceof Error ? e.message : e}`));

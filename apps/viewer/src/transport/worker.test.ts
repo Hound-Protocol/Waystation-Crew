@@ -117,3 +117,19 @@ describe("worker transport", () => {
     expect(() => host.advanceReal(60)).not.toThrow();
   });
 });
+
+describe("tasks reach the viewer", () => {
+  it("the snapshot gives every character a task, and deltas report only the changes", () => {
+    const host = new SimHost({ seed: 7, population: 60, budgetMs: Infinity });
+    const snap = host.handle({ t: "subscribe", viewport: { x: 0, y: 0, w: 60, h: 40, zoom: 3 } })[0];
+    if (snap.t !== "snapshot") throw new Error("no snapshot");
+    expect(snap.chars.every((c) => c.task && typeof c.task.kind === "number")).toBe(true);
+    const seen = new Map<number, string>();
+    let changes = 0, working = false;
+    for (let i = 0; i < 60; i++) {
+      const d = host.advanceReal(60); if (!d) continue;
+      for (const tc of d.tasks ?? []) { const k = JSON.stringify(tc.task); expect(seen.get(tc.id)).not.toBe(k); seen.set(tc.id, k); changes++; if (tc.task.kind === 5 && tc.task.began >= 0) working = true; }
+    }
+    expect(changes).toBeGreaterThan(0); expect(working).toBe(true);
+  });
+});

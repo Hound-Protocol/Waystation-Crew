@@ -1,7 +1,7 @@
 import type { World } from "../world";
 
 /** per-tick decay (1 tick = 1 sim second) */
-const DECAY = { hunger: 1 / 21_600, energy: 1 / 57_600, social: 1 / 43_200, hygiene: 1 / 57_600, fun: 1 / 36_000 };
+export const DECAY = { hunger: 1 / 21_600, energy: 1 / 57_600, social: 1 / 43_200, hygiene: 1 / 57_600, fun: 1 / 36_000 };
 
 export function decayNeeds(world: World): void {
   const c = world.chars;

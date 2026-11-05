@@ -10,6 +10,8 @@ export interface Action {
   path: Point[];       // remaining steps; empty once arrived
   ticksLeft: number;
   waited?: number;     // ticks spent waiting for a blocked tile
+  began?: number;      // tick the task actually started (on arrival)
+  total?: number;      // how many ticks it will take, for progress displays
 }
 
 export interface Affordance {

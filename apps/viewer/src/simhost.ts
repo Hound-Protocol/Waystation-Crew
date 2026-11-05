@@ -1,5 +1,5 @@
-import { profileOf, createWorld, step, seedPopulation, arrive, explain, Department, type World } from "@wc/sim-core";
-import type { ClientMsg, ServerMsg, Move, StateChange } from "@wc/protocol";
+import { taskOf, profileOf, createWorld, step, seedPopulation, arrive, explain, Department, type World } from "@wc/sim-core";
+import type { ClientMsg, ServerMsg, Move, StateChange, TaskChange } from "@wc/protocol";
 
 export const MAX_CATCHUP_TICKS = 600;
 export const MAX_SPEED = 600;
@@ -48,7 +48,7 @@ export class SimHost {
     const w = this.world, c = w.chars, m = w.station.map;
     const chars = [];
     for (let id = 0; id < c.count; id++)
-      chars.push({ id, name: c.name(id), dept: c.dept[id], rank: c.rank[id], x: c.x[id], y: c.y[id], state: c.state[id], job: c.job[id] });
+      chars.push({ id, name: c.name(id), dept: c.dept[id], rank: c.rank[id], x: c.x[id], y: c.y[id], state: c.state[id], job: c.job[id], task: taskOf(w, id) });
     const sh = w.station.ship;
     const ship = sh ? { w: sh.map.w, h: sh.map.h, tiles: Array.from(sh.map.tiles), furniture: sh.furniture, rooms: sh.rooms, deco: sh.deco ?? [], floors: sh.floors ? Array.from(sh.floors) : [], berth: sh.berth } : undefined;
     const v = this.stationView();
@@ -89,7 +89,8 @@ export class SimHost {
     this.acc = n === MAX_CATCHUP_TICKS ? 0 : this.acc - n;
     if (n <= 0) return null;
     const w = this.world, c = w.chars;
-    const before = c.state.slice(0, c.count);
+    const before = c.state.slice(0, c.count), key = (t: { kind: number; began: number; total: number }) => `${t.kind}:${t.began}:${t.total}`;
+    const beforeTask = Array.from({ length: c.count }, (_, id) => key(taskOf(w, id)));
     const t0 = this.now();
     const open = new Map<number, { move: Move; last: number }>();
     const moves: Move[] = [];
@@ -109,6 +110,8 @@ export class SimHost {
     }
     const states: StateChange[] = [];
     for (let id = 0; id < before.length; id++) if (before[id] !== c.state[id]) states.push({ id, state: c.state[id] });
-    return { t: "delta", tick: w.tick, moves, states, clock: { speed: this.speed, paused: this.paused }, shipStatus: this.shipStatus() };
+    const tasks: TaskChange[] = [];
+    for (let id = 0; id < beforeTask.length; id++) { const t = taskOf(w, id); if (beforeTask[id] !== key(t)) tasks.push({ id, task: t }); }
+    return { t: "delta", tick: w.tick, moves, states, clock: { speed: this.speed, paused: this.paused }, shipStatus: this.shipStatus(), tasks };
   }
 }

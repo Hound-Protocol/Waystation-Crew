@@ -6,6 +6,7 @@ import { isWalkable, type Point } from "../station/tilemap";
 import { shiftOf } from "../org/jobs";
 import { blockedFor, crewAction } from "../ship/ops";
 import { AFFORDANCES, ActionKind, stateForAction, type Action } from "./affordances";
+import { DECAY } from "./needs";
 
 const SAMPLE = 8;
 
@@ -101,6 +102,10 @@ export function stepActions(world: World): void {
     if (!a || a.path.length > 0) continue;
     c.state[id] = stateForAction(a.kind, true);
     const aff = AFFORDANCES.find((x) => x.kind === a.kind);
+    if (a.began === undefined && (aff || a.kind === ActionKind.Work)) {      // arrived: the task starts now
+      a.began = world.tick;
+      a.total = aff ? Math.max(1, Math.min(a.ticksLeft, Math.ceil((0.98 - c[aff.satisfies][id]) / (aff.amountPerTick - DECAY[aff.satisfies])))) : a.ticksLeft;
+    }
     if (aff) {
       const arr = c[aff.satisfies];
       arr[id] = Math.min(1, arr[id] + aff.amountPerTick);
