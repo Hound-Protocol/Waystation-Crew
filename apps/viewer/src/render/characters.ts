@@ -1,3 +1,4 @@
+import { swayAt, laneAt } from "./gait";
 import { Container, Sprite, Texture } from "pixi.js";
 import { DEPT_COLOR, SKIN } from "./colors";
 import { TILE } from "./tiles";
@@ -17,6 +18,7 @@ export class CharLayer {
   private depts: number[] = [];
   private fade: number[] = [];
   private known = new Set<number>();
+  private lane: Array<{ x: number; y: number }> = [];   // eased lane offset in tiles, perpendicular to travel
   private bob: number[] = [];                      // eased walking-sway amount 0..1
   private last: Array<{ x: number; y: number } | null> = [];
   style: LodStyle = "dot";
@@ -29,7 +31,7 @@ export class CharLayer {
     const first = this.known.size === 0;
     this.fade = this.ids.map((id) => (first || this.known.has(id) ? 1 : 0)); // newcomers fade in
     this.known = new Set(this.ids);
-    this.bob = this.ids.map(() => 0); this.last = this.ids.map(() => null);
+    this.bob = this.ids.map(() => 0); this.lane = this.ids.map(() => ({ x: 0, y: 0 })); this.last = this.ids.map(() => null);
     for (const l of this.layers.values()) { l.c.removeChildren(); l.views = []; }
   }
   private ensure(style: LodStyle) {
@@ -80,9 +82,14 @@ export class CharLayer {
           this.last[i] = { x: p.x, y: p.y };
           this.bob[i] += ((sp > 0.3 ? 1 : 0) - this.bob[i]) * (1 - Math.exp(-dt * 10));
         }
-        const sway = s === "sprite" ? Math.sin(renderTick * WALK_SPEED * Math.PI * 2) * this.bob[i] : 0;
-        const px = (p.x + 0.5 + sway * 0.05) * TILE, py = (p.y + 0.5) * TILE;
-        if (s === "sprite") v.body.rotation = sway * 0.07;
+        const sway = s === "sprite" ? swayAt(this.ids[i], renderTick * WALK_SPEED) * this.bob[i] : 0;
+        let lx = 0, ly = 0;
+        if (s === "sprite") {                                        // lane drifts across the corridor, perpendicular to travel; eased so turns and stops never snap
+          const off = laneAt(this.ids[i], renderTick) * this.bob[i], vertical = p.dir === "up" || p.dir === "down", e = 1 - Math.exp(-dt * 6), L = this.lane[i];
+          L.x += ((vertical ? off : 0) - L.x) * e; L.y += ((vertical ? 0 : off) - L.y) * e; lx = L.x; ly = L.y;
+        }
+        const px = (p.x + 0.5 + sway + lx) * TILE, py = (p.y + 0.5 + ly) * TILE;
+        if (s === "sprite") v.body.rotation = sway * 1.4;
         if (s === "dot") { v.body.position.set(px, py); }
         else if (s === "column") { v.body.position.set(px, py + TILE * 0.4); }
         else if (spr) {
