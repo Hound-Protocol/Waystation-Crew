@@ -9,6 +9,7 @@ import { AFFORDANCES, ActionKind, stateForAction, type Action } from "./affordan
 import { DECAY } from "./needs";
 import { buildAction, finishBuild } from "../light/ops";
 import { powerAction, finishPower, isPowerKind } from "../power/ops";
+import { machineRate } from "../power/grid";
 
 const SAMPLE = 8;
 
@@ -118,7 +119,13 @@ export function stepActions(world: World): void {
       a.ticksLeft--;
       const starving = a.kind === ActionKind.Sleep && c.hunger[id] < 0.1;
       if (a.ticksLeft > 0 && arr[id] < 0.98 && !starving) continue;
-    } else if ((a.kind === ActionKind.Idle || a.kind === ActionKind.Work || a.kind === ActionKind.Build || isPowerKind(a.kind)) && --a.ticksLeft > 0) continue;
+    } else if (a.kind === ActionKind.Work) {                    // a brownout slows the console; a blackout stops it
+      const slow = (a.slow ?? 0) + machineRate(world);
+      if (slow < 1) { a.slow = slow; continue; }
+      a.slow = slow - 1;
+      if (--a.ticksLeft > 0) continue;
+    }
+    else if ((a.kind === ActionKind.Idle || a.kind === ActionKind.Build || isPowerKind(a.kind)) && --a.ticksLeft > 0) continue;
     if (a.furnitureId >= 0 && world.reservations.get(a.furnitureId) === id) world.reservations.delete(a.furnitureId);
     if (a.kind === ActionKind.Build) finishBuild(world, a);
     if (isPowerKind(a.kind)) finishPower(world, a, id);

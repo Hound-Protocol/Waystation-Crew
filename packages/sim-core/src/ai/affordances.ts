@@ -13,6 +13,7 @@ export interface Action {
   began?: number;      // tick the task actually started (on arrival)
   total?: number;      // how many ticks it will take, for progress displays
   order?: number;      // the light order a Build action fulfils
+  slow?: number;       // fractional progress of a machine task under a brownout
 }
 
 export interface Affordance {

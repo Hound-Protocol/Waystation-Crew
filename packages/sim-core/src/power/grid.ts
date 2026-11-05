@@ -50,3 +50,6 @@ export function stepGrid(w: World): void {
 
 /** A ship has just docked: its fuel goes into the store. */
 export function deliverFuel(w: World): void { w.power.fuelStore = Math.min(1, w.power.fuelStore + FUEL_DELIVERY); }
+
+/** How fast machine tasks (shift work at consoles) run: follows the supply in a brownout, never below a quarter, and stops in a blackout. */
+export const machineRate = (w: World): number => (w.power.supplyLevel <= 0 ? 0 : Math.max(0.25, w.power.supplyLevel));
