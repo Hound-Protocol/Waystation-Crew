@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { TileKind, createTilemap } from "./tilemap";
+import { TileKind, createTilemap, isWalkable } from "./tilemap";
 import { findPath } from "./nav";
 import { HUB } from "./layout";
 import { buildStarterStation, interactionPoint } from "./starter";
@@ -113,13 +113,18 @@ describe("starter station", () => {
     for (let y = 0; y < st.map.h; y++) for (let x = 0; x < st.map.w; x++) { tiles++; if (st.map.get(x, y) === TileKind.Void) voidCount++; }
     expect(voidCount / tiles).toBeGreaterThan(0.4);
   });
-  it("uses every habitation preset once (unique modules)", () => {
-    const v = st.rooms.filter((r) => r.name === "Habitation").map((r) => r.variant);
-    expect(new Set(v).size).toBe(Math.min(5, v.length));
+  it("every room is its own: few rooms share a type and size", () => {
+    const counts = new Map<string, number>();
+    for (const r of st.rooms) counts.set(`${r.variant}:${r.w}x${r.h}`, (counts.get(`${r.variant}:${r.w}x${r.h}`) ?? 0) + 1);
+    expect(Math.max(...counts.values())).toBeLessThanOrEqual(4);
   });
   it("has all required rooms reachable from Arrivals", () => {
     for (const name of ["Bridge", "Engineering", "Medbay", "Security", "Cargo", "Galley", "Habitation"])
-      for (const r of st.rooms.filter((q) => q.name === name)) expect(findPath(st.map, start, inside(r)), `${name}@${r.x},${r.y}`).not.toBeNull();
+      for (const r of st.rooms.filter((q) => q.name === name)) {
+        let ok = false;
+        for (let y = r.y; y < r.y + r.h && !ok; y++) for (let x = r.x; x < r.x + r.w && !ok; x++) if (isWalkable(st.map.get(x, y)) && findPath(st.map, start, { x, y })) ok = true;
+        expect(ok, `${name}@${r.x},${r.y}`).toBe(true);
+      }
   });
   it("every furniture has a reachable interaction point", () => {
     for (const f of st.furniture) {

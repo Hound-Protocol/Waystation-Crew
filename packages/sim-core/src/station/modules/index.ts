@@ -1,11 +1,9 @@
 import { TileKind, type Tilemap } from "../tilemap";
 import { GLYPHS, rotateCW, turnsToFace, type Blueprint, type Dir } from "../blueprint";
 import type { Room, Furniture, Deco } from "../starter";
-import { PRESETS, type ModuleKind } from "./presets";
+import { type ModuleKind } from "../kit";
 
-export type { ModuleKind } from "./presets";
-export const MODULE_KINDS = Object.keys(PRESETS) as ModuleKind[];
-export const PRESETS_PER_KIND = 5;
+export { MODULE_KINDS, type ModuleKind } from "../kit";
 
 /** Room name per kind; org/jobs.ts maps room names to departments. */
 export const ROOM_NAME: Record<ModuleKind, string> = {
@@ -27,19 +25,8 @@ export const MOUNTS: Record<ModuleKind | "corridor", string[]> = {
   corridor: ["wall:light", "wall:vent", "wall:sign-arrow", "wall:extinguisher", "wall:panel", "wall:light"],
 };
 
+/** A generated room ready to stamp: `variant` is the room type's index in the kit. */
 export interface ModulePreset { kind: ModuleKind; variant: number; blueprint: Blueprint }
-
-export function presetsOf(kind: ModuleKind): ModulePreset[] {
-  return PRESETS[kind].map((make, variant) => ({ kind, variant, blueprint: make() }));
-}
-
-/** Random preset of a kind. Prefers variants not in `used`, so repeated builds look different. */
-export function pickPreset(kind: ModuleKind, rng: { int(min: number, max: number): number }, used: Iterable<number> = []): ModulePreset {
-  const all = presetsOf(kind), taken = new Set(used);
-  const fresh = all.filter((p) => !taken.has(p.variant));
-  const pool = fresh.length ? fresh : all;
-  return pool[rng.int(0, pool.length - 1)];
-}
 
 export interface ModuleTarget { map: Tilemap; rooms: Room[]; furniture: Furniture[]; deco: Deco[]; floors: Uint8Array }
 

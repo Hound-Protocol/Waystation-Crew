@@ -6,6 +6,7 @@ import { decayNeeds } from "./ai/needs";
 import { buildJobPosts, type JobPost } from "./org/jobs";
 import { stepMovement } from "./ai/move";
 import { stepAI, stepActions } from "./ai/decide";
+import { growIfNeeded, GROWTH_INTERVAL } from "./station/growth";
 import { createCharStore, hashChars, type CharStore } from "./ecs";
 
 export type WorldEvent = { type: "moved"; id: number; from: Point; to: Point } | { type: "state"; id: number; state: number };
@@ -22,6 +23,8 @@ export interface World {
   posts: JobPost[];
   postHolder: Map<number, number>; // postId -> charId
   stats: { decisions: number };
+  /** bumps whenever the station grows; viewers re-sync the map when it changes */
+  stationRev: number;
   recordEvents: boolean;
   events: WorldEvent[];
   /** extension point: hash contributors registered by subsystems */
@@ -41,7 +44,7 @@ export function createWorld(seed: number, station: Station = buildStarterStation
   }
   return {
     seed, tick: 0, rng: createRng(seed), chars: createCharStore(), station, furnitureByKind,
-    reservations: new Map(), actions: [], posts: buildJobPosts(station), postHolder: new Map(), stats: { decisions: 0 }, recordEvents: false, events: [], hashers: [],
+    reservations: new Map(), actions: [], posts: buildJobPosts(station), postHolder: new Map(), stats: { decisions: 0 }, stationRev: 0, recordEvents: false, events: [], hashers: [],
   };
 }
 
@@ -51,6 +54,7 @@ export function step(world: World): void {
   stepAI(world);
   stepMovement(world);
   stepActions(world);
+  if (world.tick % GROWTH_INTERVAL === 0) growIfNeeded(world);
 }
 
 export function stepMany(world: World, n: number): void {

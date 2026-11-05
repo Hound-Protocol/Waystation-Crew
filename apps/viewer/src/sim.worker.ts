@@ -10,5 +10,6 @@ setInterval(() => {
   const d = host.advanceReal((now - last) / 1000);
   last = now;
   if (d) post(d);
+  const st = host.stationUpdate(); if (st) post(st);
   const i = host.inspectMsg(); if (i) post(i);
 }, 100);

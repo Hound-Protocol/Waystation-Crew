@@ -3,6 +3,7 @@ import type { CharSnap, Clock, DecoSnap, DevCmd, FurnitureSnap, Move, RoomSnap, 
 export type ClientMsg = { t: "subscribe"; viewport: Viewport } | { t: "devCmd"; cmd: DevCmd } | { t: "inspect"; id: number | null };
 export type ServerMsg =
   | { t: "snapshot"; tick: number; w: number; h: number; tiles: number[]; furniture: FurnitureSnap[]; rooms: RoomSnap[]; chars: CharSnap[]; deco?: DecoSnap[]; floors?: number[] }
+  | { t: "station"; tick: number; w: number; h: number; tiles: number[]; furniture: FurnitureSnap[]; rooms: RoomSnap[]; deco?: DecoSnap[]; floors?: number[] }
   | { t: "delta"; tick: number; moves: Move[]; states: StateChange[]; clock: Clock }
   | { t: "inspect"; id: number; tick: number; lines: string[] };
 
@@ -38,6 +39,6 @@ export function decodeClient(s: string): ClientMsg {
 
 export function decodeServer(s: string): ServerMsg {
   const m: unknown = JSON.parse(s);
-  if (isObj(m) && (m.t === "snapshot" || m.t === "delta" || m.t === "inspect") && isNum(m.tick)) return m as unknown as ServerMsg;
+  if (isObj(m) && (m.t === "snapshot" || m.t === "station" || m.t === "delta" || m.t === "inspect") && isNum(m.tick)) return m as unknown as ServerMsg;
   throw new Error("invalid server message");
 }

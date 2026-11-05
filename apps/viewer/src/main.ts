@@ -44,6 +44,7 @@ async function boot() {
   const hud = document.getElementById("hud")!, footer = document.getElementById("footer")!;
   footer.textContent = `${STATION_NAME} · build ${BUILD}`;
 
+  const fades: Sprite[] = [];
   const transport: SimTransport = createWorkerTransport();
   const select = (id: number | null) => {
     selected = id; follow = id !== null; if (id === null) markerPos = null;
@@ -64,6 +65,12 @@ async function boot() {
         if (cam.scale < 10) { cam.zoomAt(app.screen.width / 2, app.screen.height / 2, 10 / cam.scale); const home = m.rooms.find((r) => r.kind === "arrivals"); cam.centerOn(home ? home.x + home.w / 2 : mapW / 2, home ? home.y + home.h / 2 : mapH / 2, app.screen.width, app.screen.height); }
         fitted = true;
       }
+    } else if (m.t === "station") {
+      // station grew: bake the new map under the old one and cross-fade (no pop-in)
+      const next = new Sprite(canvasTexture(buildTileCanvas({ w: m.w, h: m.h, tiles: m.tiles, rooms: m.rooms, furniture: m.furniture, deco: m.deco, floors: m.floors })));
+      next.alpha = 0; mapLayer.addChild(next); fades.push(next);
+      doorLayer.reset(m.tiles, m.w, m.h, (x, y) => doorIsVertical(m.tiles, m.w, m.h, x, y));
+      mapW = m.w; mapH = m.h;
     } else if (m.t === "delta") {
       tracks.apply(m.moves); tracks.prune(m.tick - 120); latestTick = m.tick; speed = m.clock.speed; paused = m.clock.paused;
       panel.updateStates(m.states); panel.setClock(paused);
@@ -106,6 +113,10 @@ async function boot() {
     cam.update(dt);
     if (follow && selected !== null) { const p = tracks.positionAt(selected, renderTick); if (p) cam.followToward(p.x + 0.5, p.y + 0.5, app.screen.width, app.screen.height, dt); }
     cam.clamp(mapW, mapH, app.screen.width, app.screen.height);
+    for (let i = fades.length - 1; i >= 0; i--) {
+      const f = fades[i]; f.alpha = Math.min(1, f.alpha + dt / 1.2);
+      if (f.alpha >= 1) { for (const o of mapLayer.children.slice(0, -1)) if (o !== f) o.destroy(); fades.splice(i, 1); }
+    }
     if (fitted) worldA = Math.min(1, worldA + dt / 0.7);
     world.alpha = worldA * worldA * (3 - 2 * worldA);
     world.scale.set(cam.scale / TILE); world.position.set(cam.tx, cam.ty);

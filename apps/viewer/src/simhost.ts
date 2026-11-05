@@ -9,6 +9,7 @@ export class SimHost {
   speed = 1;
   paused = false;
   private acc = 0;
+  private sentRev = 0;
   private inspectId: number | null = null;
   private now: () => number; private budgetMs: number;
   constructor(private opts: { seed: number; population: number; now?: () => number; budgetMs?: number }) {
@@ -40,6 +41,14 @@ export class SimHost {
     return { t: "snapshot", tick: w.tick, w: m.w, h: m.h, tiles: Array.from(m.tiles), furniture: w.station.furniture, rooms: w.station.rooms, chars, deco: w.station.deco ?? [], floors: w.station.floors ? Array.from(w.station.floors) : [] };
   }
 
+  /** Present only once per station growth: lets the viewer rebake and fade the new rooms in. */
+  stationUpdate(): ServerMsg | null {
+    if (this.world.stationRev === this.sentRev) return null;
+    this.sentRev = this.world.stationRev;
+    const w = this.world, m = w.station.map;
+    return { t: "station", tick: w.tick, w: m.w, h: m.h, tiles: Array.from(m.tiles), furniture: w.station.furniture, rooms: w.station.rooms, deco: w.station.deco ?? [], floors: w.station.floors ? Array.from(w.station.floors) : [] };
+  }
+
   handle(msg: ClientMsg): ServerMsg[] {
     if (msg.t === "subscribe") return [this.snapshot()];
     if (msg.t === "inspect") { this.inspectId = msg.id; const m = this.inspectMsg(); return m ? [m] : []; }
@@ -52,7 +61,7 @@ export class SimHost {
         return [this.snapshot()];
       case "reset":
         this.opts = { ...this.opts, seed: cmd.seed };
-        this.world = this.build(cmd.seed); this.acc = 0;
+        this.world = this.build(cmd.seed); this.acc = 0; this.sentRev = 0;
         return [this.snapshot()];
     }
   }

@@ -88,7 +88,10 @@ export class Canvas {
 }
 
 /** Rooms are boxy, like a real station's: rectangles with chamfered corners, notches and wings (the Box/Icebox look). */
-const chamfer = (w: number, h: number, c: number) => (x: number, y: number) => !(x + y < c || w - 1 - x + y < c || x + h - 1 - y < c || w - 1 - x + h - 1 - y < c);
+const chamfer = (w: number, h: number, c0: number) => {
+  const c = Math.min(c0, Math.max(0, Math.floor((Math.min(w, h) - 3) / 2)));     // never leave 1-wide stubs on small rooms
+  return (x: number, y: number) => !(x + y < c || w - 1 - x + y < c || x + h - 1 - y < c || w - 1 - x + h - 1 - y < c);
+};
 export const Shapes = {
   octagon: (w: number, h: number, c: number) => new Canvas(w, h, chamfer(w, h, Math.min(c, 3))),
   ellipse: (w: number, h: number) => new Canvas(w, h, chamfer(w, h, 2)),
