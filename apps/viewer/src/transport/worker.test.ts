@@ -48,13 +48,13 @@ describe("worker transport", () => {
     const inside = (d: { x: number; y: number }) => d.x >= b.x && d.x < b.x + b.w && d.y >= b.y && d.y < b.y + b.h;
     expect(m.deco!.some(inside)).toBe(false); expect(m.furniture.some(inside)).toBe(false);
     expect(m.rooms.some((r) => r.name === "Cargo Ship")).toBe(false);
-    expect(m.shipStatus).toEqual({ slip: 0, holding: false });
+    expect(m.shipStatus).toEqual({ slip: 0, holding: false, aboard: 0 });
   });
   it("deltas carry the ship's schedule slip, and say when it is waiting for pilots", () => {
     const host = new SimHost({ seed: 1, population: 20, budgetMs: Infinity });
     host.handle({ t: "subscribe", viewport: { x: 0, y: 0, w: 60, h: 40, zoom: 3 } });
     const d = host.advanceReal(30)!;
-    expect(d.shipStatus).toEqual({ slip: 0, holding: false });
+    expect(d.shipStatus).toEqual({ slip: 0, holding: false, aboard: 0 });
   });
   it("advancing real time yields deltas", async () => {
     const { t, got, host } = collect();

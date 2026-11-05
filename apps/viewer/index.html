@@ -10,6 +10,12 @@
     #vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,.45) 100%); }
     #hud { position: fixed; left: 8px; top: 6px; font-size: 12px; line-height: 1.4; text-shadow: 0 1px 0 #000; pointer-events: none; }
     #hud b { color: #4de1ff; font-weight: normal; }
+    #overview { position: fixed; left: 50%; bottom: 18px; width: min(360px, 40vw); aspect-ratio: 16 / 9; box-sizing: border-box; padding: 12px 16px; transform: translate(-50%, 14px); opacity: 0; pointer-events: none; transition: opacity .3s ease, transform .3s ease; background: rgba(8,12,18,.82); border: 1px solid rgba(77,225,255,.45); border-radius: 4px; box-shadow: 0 0 18px rgba(77,225,255,.12); font-size: 12px; color: #9fb4c4; display: flex; flex-direction: column; }
+    #overview.on { opacity: 1; transform: translate(-50%, 0); }
+    #overview .ov-kind { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #4de1ff; opacity: .8; }
+    #overview .ov-title { font-size: 16px; color: #e8f4fb; margin: 2px 0 8px; }
+    #overview .ov-rows { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; }
+    #overview .ov-rows b { font-weight: normal; color: #e8f4fb; text-align: right; }
     #footer { position: fixed; right: 8px; bottom: 6px; font-size: 10px; opacity: .55; pointer-events: none; }
   </style>
 </head>

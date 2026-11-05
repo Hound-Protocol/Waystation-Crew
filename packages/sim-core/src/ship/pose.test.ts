@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { shipPose, gateProfile } from "./pose";
-import { shipPhase, HOUR } from "./timeline";
+import { shipPhase, CYCLE } from "./timeline";
 
 const range = (a: number, b: number) => Array.from({ length: b - a }, (_, i) => a + i);
-const first = (pred: (t: number) => boolean, from = 0) => { for (let t = from; t < from + 2 * HOUR; t++) if (pred(t)) return t; throw new Error("none"); };
+const first = (pred: (t: number) => boolean, from = 0) => { for (let t = from; t < from + 2 * CYCLE; t++) if (pred(t)) return t; throw new Error("none"); };
 const liftoff = first((t) => shipPhase(t).phase === "flight" && shipPhase(t).leg === "out");
 const landing = first((t) => shipPhase(t).phase === "landed");
 const backStart = first((t) => shipPhase(t).phase === "flight" && shipPhase(t).leg === "back");
@@ -20,8 +20,8 @@ describe("ship pose: where the ship is", () => {
     expect(shipPose(liftoff).s).toBe(0);
     expect(shipPose(landing - 1).s).toBeGreaterThan(0.9999);
     const speed = (t: number) => shipPose(t + 1).s - shipPose(t).s;
-    expect(speed(liftoff)).toBeLessThan(speed(liftoff + 300) / 100);       // starts from rest
-    expect(speed(landing - 1)).toBeLessThan(speed(liftoff + 300) / 100);   // and arrives at rest
+    expect(speed(liftoff)).toBeLessThan(speed(liftoff + 150) / 100);       // starts from rest
+    expect(speed(landing - 1)).toBeLessThan(speed(liftoff + 150) / 100);   // and arrives at rest
   });
   it("flies back the same way in reverse", () => {
     let prev = 1;
@@ -38,7 +38,7 @@ describe("ship pose: where the ship is", () => {
 });
 
 describe("ship pose: bars, engines, gates", () => {
-  const all = range(0, HOUR);
+  const all = range(0, CYCLE);
   it("keeps every level within 0..1", () => {
     for (const t of all) { const p = shipPose(t); for (const v of [p.bars, p.thrust, p.glow, p.stationGate.v, p.padGate.v, p.s, p.turn]) { expect(v).toBeGreaterThanOrEqual(0); expect(v).toBeLessThanOrEqual(1); } }
   });
@@ -54,8 +54,8 @@ describe("ship pose: bars, engines, gates", () => {
   });
   it("fires the main engines while accelerating out of the berth and glows while they cool", () => {
     expect(shipPose(liftoff + 20).thrust).toBeGreaterThan(0.5);
-    expect(shipPose(liftoff + 300).thrust).toBe(0);
-    expect(shipPose(liftoff + 20).glow).toBeGreaterThan(shipPose(liftoff + 400).glow);
+    expect(shipPose(liftoff + 150).thrust).toBe(0);
+    expect(shipPose(liftoff + 20).glow).toBeGreaterThan(shipPose(liftoff + 250).glow);
     expect(shipPose(0)).toMatchObject({ bars: 0, thrust: 0, glow: 0 });
   });
   it("keeps the station gateway open while docked, shuts it before departure, and keeps it shut while away", () => {
@@ -83,5 +83,5 @@ describe("ship pose: bars, engines, gates", () => {
     let prev = 0; for (let t = landing; t <= landing + 60; t++) { expect(g(t)).toBeGreaterThanOrEqual(prev); prev = g(t); }
     expect(gateProfile(1)).toBeCloseTo(1, 9);
   });
-  it("is the same every hour", () => { for (const t of all.filter((x) => x % 17 === 0)) expect(shipPose(t + 4 * HOUR)).toEqual(shipPose(t)); });
+  it("is the same every cycle", () => { for (const t of all.filter((x) => x % 17 === 0)) expect(shipPose(t + 4 * CYCLE)).toEqual(shipPose(t)); });
 });

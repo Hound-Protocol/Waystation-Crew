@@ -8,12 +8,12 @@ import { HUB, interactionPoint } from "../station/starter";
 import { findPath } from "../station/nav";
 import { CharState } from "../ai/affordances";
 import { shipPose } from "./pose";
-import { shipPhase, HOUR } from "./timeline";
+import { shipPhase, CYCLE } from "./timeline";
 import { flightSeats } from "./crew";
 import { blockedFor, inShip, shipBoardable, shipPoseNow } from "./ops";
 
 const spawnAt = (w: World, dept: Department, x: number, y: number) => addCharacter(w, { name: "T", dept, rank: Rank.Trainee, x, y });
-const firstTick = (pred: (t: number) => boolean) => { for (let t = 0; t < 2 * HOUR; t++) if (pred(t)) return t; throw new Error("none"); };
+const firstTick = (pred: (t: number) => boolean) => { for (let t = 0; t < 2 * CYCLE; t++) if (pred(t)) return t; throw new Error("none"); };
 
 describe("who may enter the ship", () => {
   const w = createWorld(1), seats = flightSeats(w.station)!;
@@ -55,7 +55,7 @@ describe("the ship flies only with pilots", () => {
     const seatedAt = (furn: number) => { const id = w.reservations.get(furn); if (id === undefined) return false; const ip = interactionPoint(w.station.map, w.station.furniture[furn])!; return w.chars.state[id] === CharState.Working && w.chars.x[id] === ip.x && w.chars.y[id] === ip.y && w.chars.dept[id] === Department.Flight; };
     stepMany(w, liftoff - 400);                                            // just before the gate starts closing
     expect(seatedAt(seats.pilot) && seatedAt(seats.copilot)).toBe(true);
-    stepMany(w, 700);                                                       // in flight
+    stepMany(w, 650);                                                       // in flight
     expect(w.ship.slip).toBe(0); expect(shipPoseNow(w).phase).toBe("flight");
     expect(w.ship.crew.length).toBeGreaterThanOrEqual(2);
     for (const id of w.ship.crew) expect(inShip(w, w.chars.x[id], w.chars.y[id])).toBe(true);

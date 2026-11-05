@@ -18,7 +18,10 @@ import { ClockSync } from "./render/clock";
 import { DoorLayer } from "./render/doors";
 import { doorIsVertical } from "./render/sprites/orient";
 import { SolarLayer } from "./render/space/solar";
-import { SYSTEM_EXTENT } from "./render/space/system";
+import { SYSTEM_EXTENT, BODIES, SUN_RADIUS, stationFrame } from "./render/space/system";
+import { zoneRadius, overviewActive, footprintHit, footprintEdges, shipLocal, circleHit, pickTarget, type Grid, type Pt, type Target } from "./render/reticle";
+import { Outline, ReticleGlyph } from "./render/reticlelayer";
+import { OverviewCard, overviewFor, type BodyInfo } from "./ui/overview";
 import { SpaceLayer } from "./render/space/layer";
 
 const BUILD = (import.meta as unknown as { env: Record<string, string> }).env.VITE_BUILD?.slice(0, 7) ?? "dev";
@@ -46,6 +49,11 @@ async function boot() {
   world.addChild(solar.root, padLayer.root, mapLayer, gateLayer.root, shipBody, doorLayer.root, chars.root);
   const space = new SpaceLayer();
   app.stage.addChild(space.root, world);
+  const stationOutline = new Outline(), shipOutline = new Outline(), bodyOutline = new Outline(), glyph = new ReticleGlyph();
+  world.addChild(stationOutline.g, bodyOutline.g); shipBody.addChild(shipOutline.g); app.stage.addChild(glyph.root);
+  const card = new OverviewCard(document.body);
+  let stationGrid: Grid = { w: 0, h: 0, solid: () => false }, shipGrid: Grid | null = null;
+  const gridOf = (w: number, h: number, tiles: ArrayLike<number>): Grid => ({ w, h, solid: (x, y) => x >= 0 && y >= 0 && x < w && y < h && tiles[y * w + x] !== 0 });
   world.alpha = 0; // fades in with the first snapshot
 
   chars.textures = texs;
@@ -60,7 +68,7 @@ async function boot() {
 
   const fades: Sprite[] = [];
   let shipHold: number | null = null;   // dev hook: freeze the ship at a tick of its round trip
-  let shipSlip = 0, shipHolding = false;
+  let shipSlip = 0, shipHolding = false, shipAboard = 0;
   let berth: Rect | null = null, followShip = false, shipAt = { x: 0, y: 0 };
   const transport: SimTransport = createWorkerTransport();
   const select = (id: number | null) => {
@@ -83,15 +91,17 @@ async function boot() {
       mapLayer.addChild(new Sprite(canvasTexture(buildTileCanvas({ w: m.w, h: m.h, tiles: m.tiles, rooms: m.rooms, furniture: m.furniture, deco: m.deco, floors: m.floors }))));
       doorLayer.reset(m.tiles, m.w, m.h, (x, y) => doorIsVertical(m.tiles, m.w, m.h, x, y));
       gateLayer.reset(m.tiles, m.w, m.h);
+      stationGrid = gridOf(m.w, m.h, m.tiles); stationOutline.setEdges(footprintEdges(stationGrid));
       if (m.ship) {
         const sh = m.ship;
         shipBake.removeChildren().forEach((c) => c.destroy());
         shipBake.addChild(new Sprite(canvasTexture(buildTileCanvas({ w: sh.w, h: sh.h, tiles: sh.tiles, rooms: sh.rooms, furniture: sh.furniture, deco: sh.deco, floors: sh.floors }))));
         shipLayer.reset(shipFixtures(sh.deco, (x, y) => (x < 0 || y < 0 || x >= sh.w || y >= sh.h ? 0 : sh.tiles[y * sh.w + x]) as TileKind, sh.rooms));
         shipGates.reset(sh.tiles, sh.w, sh.h);
+        shipGrid = gridOf(sh.w, sh.h, sh.tiles); shipOutline.setEdges(footprintEdges(shipGrid));
         shipBody.pivot.set((sh.w * TILE) / 2, (sh.h * TILE) / 2); berth = sh.berth; shipBody.visible = true;
       }
-      if (m.shipStatus) { shipSlip = m.shipStatus.slip; shipHolding = m.shipStatus.holding; }
+      if (m.shipStatus) { shipSlip = m.shipStatus.slip; shipHolding = m.shipStatus.holding; shipAboard = m.shipStatus.aboard; }
       mapW = m.w; mapH = m.h; crew = m.chars.length;
       chars.reset(m.chars); tracks.reset(m.chars); panel.setChars(m.chars); if (selected !== null) select(null);
       renderTick = latestTick = m.tick; clock.reset(m.tick, speed);
@@ -106,9 +116,10 @@ async function boot() {
       next.alpha = 0; mapLayer.addChild(next); fades.push(next);
       doorLayer.reset(m.tiles, m.w, m.h, (x, y) => doorIsVertical(m.tiles, m.w, m.h, x, y));
       gateLayer.reset(m.tiles, m.w, m.h);
+      stationGrid = gridOf(m.w, m.h, m.tiles); stationOutline.setEdges(footprintEdges(stationGrid));
       mapW = m.w; mapH = m.h;
     } else if (m.t === "delta") {
-      if (m.shipStatus) { shipSlip = m.shipStatus.slip; shipHolding = m.shipStatus.holding; }
+      if (m.shipStatus) { shipSlip = m.shipStatus.slip; shipHolding = m.shipStatus.holding; shipAboard = m.shipStatus.aboard; }
       tracks.apply(m.moves); tracks.prune(m.tick - 120); latestTick = m.tick; speed = m.clock.speed; paused = m.clock.paused;
       panel.updateStates(m.states); panel.setClock(paused);
     } else if (m.id === selected) { panel.setInspect(m.lines); if (m.profile) pda.update(m.profile); }
@@ -181,6 +192,24 @@ async function boot() {
     chars.update(dt, renderTick, tracks, cam, app.screen.width, app.screen.height);
     const d = Math.floor((latestTick + 21600) / 86400) + 1, h = Math.floor(((latestTick / 3600) + 6) % 24), m = Math.floor((latestTick / 60) % 60);
     hud.innerHTML = `<b>${STATION_NAME}</b> · day ${d} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} · crew ${crew} · Z${zoomLevel(cam.scale)}${paused ? " · paused" : ""}${shipHolding ? " · ship waiting for pilots" : ""}${speed !== 1 ? ` · ${speed}x` : ""}`;
+    const level = zoomLevel(cam.scale), active = fitted && overviewActive(level);
+    glyph.update(dt, app.screen.width, app.screen.height, active);
+    let hit: { id: string } | null = null;
+    if (active) {
+      const zc = cam.screenToWorld(app.screen.width / 2, app.screen.height / 2), zr = zoneRadius(app.screen.height) / cam.scale;
+      const frame = stationFrame(renderTick);
+      const targets: (Target & { circle?: { c: Pt; r: number } })[] = [];
+      if (berth && shipGrid) targets.push({ id: "ship", hit: (c, r) => footprintHit(shipGrid!, shipLocal(c, shipAt as { x: number; y: number; rot: number }, shipGrid!.w, shipGrid!.h), r) });
+      targets.push({ id: "station", hit: (c, r) => footprintHit(stationGrid, c, r) });
+      for (const b of BODIES) { const p = frame.body(b); targets.push({ id: `body:${b.name}`, circle: { c: p, r: b.radius }, hit: (c, r) => circleHit(p, b.radius, c, r) }); }
+      targets.push({ id: "body:Sun", circle: { c: frame.sun, r: SUN_RADIUS }, hit: (c, r) => circleHit(frame.sun, SUN_RADIUS, c, r) });
+      const t = pickTarget(zc, zr, targets); hit = t;
+      if (t?.circle) bodyOutline.setCircle(t.circle.c, t.circle.r);
+      const bodies = new Map<string, BodyInfo>();
+      for (const tg of targets) if (tg.circle) { const n = tg.id.slice(5); bodies.set(n, { name: n, kind: n === "Sun" ? "Star" : "Planet", distance: Math.hypot(tg.circle.c.x - frame.station.x, tg.circle.c.y - frame.station.y) }); }
+      card.update(dt, t ? overviewFor(t.id, { stationName: STATION_NAME, crew, clock: `day ${d} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`, shipTick: shipHold ?? renderTick - shipSlip, slip: shipSlip, holding: shipHolding, aboard: shipAboard, bodies }) : null);
+    } else card.update(dt, null);
+    stationOutline.update(dt, hit?.id === "station"); shipOutline.update(dt, hit?.id === "ship"); bodyOutline.update(dt, !!hit && hit.id.startsWith("body:"));
   });
   (window as unknown as { __wc: unknown }).__wc = { cam, transport, holdShip: (tick: number | null) => { shipHold = tick; }, shipAt: () => shipAt };
 }

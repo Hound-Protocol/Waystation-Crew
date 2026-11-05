@@ -14,7 +14,7 @@ export interface Body {
 
 export const SUN_RADIUS = 1800;
 /** Distance of the station from its home planet's centre, tiles. */
-const STATION_OFFSET = { x: 700, y: -520 };
+const STATION_OFFSET = { x: 1400, y: -1040 };
 
 export const BODIES: Body[] = [
   { name: "Cinder", planet: 2, orbit: 5000, radius: 70, phase: 2.2 },

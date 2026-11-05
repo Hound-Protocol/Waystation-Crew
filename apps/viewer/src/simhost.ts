@@ -42,7 +42,7 @@ export class SimHost {
     for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) { tiles[y * m.w + x] = 0; if (floors.length) floors[y * m.w + x] = 0; }
     return { tiles, floors, furniture: st.furniture.filter((f) => !inside(f)), rooms: st.rooms.filter((r) => r.name !== "Cargo Ship"), deco: (st.deco ?? []).filter((d) => !inside(d)) };
   }
-  private shipStatus() { return { slip: this.world.ship.slip, holding: this.world.ship.holding }; }
+  private shipStatus() { return { slip: this.world.ship.slip, holding: this.world.ship.holding, aboard: this.world.ship.crew.length }; }
 
   snapshot(): ServerMsg {
     const w = this.world, c = w.chars, m = w.station.map;

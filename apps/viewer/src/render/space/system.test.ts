@@ -29,3 +29,13 @@ describe("solar system", () => {
     expect(Math.hypot(sun1.x - sun0.x, sun1.y - sun0.y)).toBeGreaterThan(1000);
   });
 });
+
+describe("station distance", () => {
+  it("the station sits about 1740 tiles from its home planet (twice the old 870)", () => {
+    const home = BODIES.find((b) => b.home)!;
+    for (const t of [0, 1234, 40000]) {
+      const f = stationFrame(t), p = f.body(home);
+      expect(Math.hypot(p.x - f.station.x, p.y - f.station.y)).toBeCloseTo(Math.hypot(1400, 1040), 6);
+    }
+  });
+});
