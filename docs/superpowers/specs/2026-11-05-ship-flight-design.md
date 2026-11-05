@@ -47,3 +47,11 @@ Passenger boarding and cargo (slice 4), call-a-ship button and any manual trigge
 - Flight-department posts disappear until 2b (the cockpit consoles live in the ship chunk, unreachable by crew).
 - The Arrivals gate column is not yet made unwalkable while the ship is away (nobody uses it in 2a); portals in 2b decide that.
 - Dev panel: "go to station", "go to pad", "follow ship".
+
+## Slice 2b: as built (rulings)
+- Ruling: **embedded sim-space** instead of frames/portals. The ship interior stays in the station map at the berth; the sim lets Flight crew walk it through the stern gate only while docked with the gate fully open (`blockedFor`, anyone may leave). The viewer draws the flying body from `st.ship` (an exact extracted copy), masks the berth in the station snapshot and draws crew inside the berth through the ship transform (`aboardPlace`). Frames/portals are deferred to pad boarding.
+- Pilots required: pilot + co-pilot consoles must both be seated by Flight crew in state Working at their interaction points at the last docked tick; otherwise `slip++`, `holding=true` (ship clock = `tick - slip`; `shipStatus {slip, holding}` in protocol, HUD " ship waiting for pilots").
+- Crew lock: at `gate-closing` t=0 everyone inside the ship becomes `crew`, locked to their console until docking at the station.
+- Staffing: `FLIGHT_CREW = 6`, forced into the first six seeded characters; `take()` spreads Flight crew by shift fill (pilot and co-pilot before engineer); nobody else gets Flight posts.
+- Cockpit seats by console y: lowest = co-pilot, middle = pilot, highest = engineer.
+- Visual check: crew sit upright at their consoles in the rotated body mid-flight; at low zoom they draw as dots.
