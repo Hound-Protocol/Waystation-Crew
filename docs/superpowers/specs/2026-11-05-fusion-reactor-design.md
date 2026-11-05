@@ -49,7 +49,7 @@ New module `packages/sim-core/src/power/`:
 - `supplyLevel = clamp(supply / demand, 0, 1)`.
 - Brownout (`0 < supplyLevel < 1`): lamps dim by `supplyLevel`, machine tasks (cooking, treatment, work) take longer by `1 / supplyLevel` up to a cap, nothing stops.
 - Scram (output 0): normal lights and machines are off. The battery supplies life support and doors only, draining at their base load. Charge is restored when supply exceeds demand.
-- Battery empty: doors fail open (never trapping crew) and a `lifeSupportDown` flag starts a timer; the consequences of that timer (cold, evacuation) are out of scope for this spec and the flag is only displayed.
+- Battery empty: doors lose power and stay closed. A closed unpowered door can be forced open by hand: it takes 10 seconds, and the first character who reaches it attempts it (others wait or path elsewhere); once forced it stays open. A `lifeSupportDown` flag starts a timer; the consequences of that timer (cold, evacuation) are out of scope for this spec and the flag is only displayed.
 - The ship, docking clamps and launch are never read from the grid.
 
 ### Protocol
@@ -73,7 +73,7 @@ New module `packages/sim-core/src/power/`:
 ## Testing
 
 - Reactor: output vs feed and temp; temperature settles; fuel burn; containment failure scrams; restart sequence order and timing; determinism (same seed, same hash).
-- Grid: brownout dimming math, scram supply is zero, battery drain and recharge, door-fail-open at empty battery, ship never power-gated.
+- Grid: brownout dimming math, scram supply is zero, battery drain and recharge, unpowered doors stay closed, forced open by the first arriver in 10 s, ship never power-gated.
 - Ops: lead selection and Senior fallback; unattended reactor trends to scram; fuel starvation when the ship is late.
 - Protocol and viewer: `power` in snapshot and delta; station card shows values; sprite rank tiers produce distinct textures (beret present for Chief in all views).
 - Parity: world-hash test covers `world.power`.
