@@ -8,4 +8,5 @@ export const mul = (c: RGB, f: number): RGB => reg([Math.min(255, Math.floor(c[0
 
 export const OUT = hex("#07080b");
 export const CYAN = hex("#4de1ff"), ORANGE = hex("#ff8a2a"), GREENE = hex("#7dffb0"), RED = hex("#ff4040"), LAMP = hex("#ffd866");
-export const EMISSIVE_KEYS = new Set([CYAN, ORANGE, GREENE, RED, LAMP, hex("#3fd98a"), hex("#2aa0bd")].map((c) => (c[0] << 16) | (c[1] << 8) | c[2]));
+export const AMBER = hex("#ffb02e"), ICE = hex("#c9f6ff"), SCR = hex("#2fb6d6"), VIO = hex("#b58cff"), WHT = hex("#f2fbff"), LIME = hex("#b6ff5a");
+export const EMISSIVE_KEYS = new Set([CYAN, ORANGE, GREENE, RED, LAMP, AMBER, ICE, SCR, VIO, WHT, LIME, hex("#3fd98a"), hex("#2aa0bd")].map((c) => (c[0] << 16) | (c[1] << 8) | c[2]));

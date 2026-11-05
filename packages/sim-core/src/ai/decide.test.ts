@@ -20,7 +20,7 @@ const spawn = (w: ReturnType<typeof createWorld>, x = 10, y = 3) =>
 describe("decide", () => {
   it("hungry character chooses to eat at a table", () => {
     const w = createWorld(1, buildStarterStation());
-    const id = spawn(w, 10, 18);
+    const id = spawn(w, 62, 70);
     w.chars.hunger[id] = 0.1; w.chars.nextDecideTick[id] = 0;
     stepAI(w);
     const a = w.actions[id]!;
@@ -29,7 +29,7 @@ describe("decide", () => {
   });
   it("tired character chooses a bed", () => {
     const w = createWorld(1, buildStarterStation());
-    const id = spawn(w, 10, 18);
+    const id = spawn(w, 62, 70);
     w.chars.energy[id] = 0.1; w.chars.nextDecideTick[id] = 0;
     stepAI(w);
     expect(w.actions[id]!.kind).toBe(ActionKind.Sleep);
@@ -53,7 +53,7 @@ describe("decide", () => {
   });
   it("staggers decisions: no tick decides for more than 60 of 300 characters", () => {
     const w = createWorld(3, buildStarterStation());
-    for (let i = 0; i < 300; i++) spawn(w, 10 + (i % 40), 18 + (i % 2));
+    for (let i = 0; i < 300; i++) spawn(w, 57 + (i % 10), 70 + (i % 2));
     let max = 0;
     for (let t = 0; t < 30; t++) { step(w); max = Math.max(max, w.stats.decisions); }
     expect(max).toBeLessThanOrEqual(60);
@@ -61,7 +61,7 @@ describe("decide", () => {
   });
   it("needs decay over time and a fed character stops being hungry-driven", () => {
     const w = createWorld(1, buildStarterStation());
-    const id = spawn(w, 10, 18);
+    const id = spawn(w, 62, 70);
     stepMany(w, 3600);
     expect(w.chars.hunger[id]).toBeLessThan(1);
   });

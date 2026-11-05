@@ -8,7 +8,7 @@ import { CharState } from "../ai/affordances";
 import { interactionPoint } from "../station/starter";
 
 const spawn = (w: ReturnType<typeof createWorld>, dept: Department, i = 0) =>
-  addCharacter(w, { name: `E${i}`, dept, rank: Rank.Trainee, x: 10 + (i % 30), y: 18 });
+  addCharacter(w, { name: `E${i}`, dept, rank: Rank.Trainee, x: 57 + (i % 10), y: 70 });
 
 describe("shifts", () => {
   it("starts at day shift and cycles in 8h blocks", () => {

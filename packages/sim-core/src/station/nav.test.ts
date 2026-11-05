@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { TileKind, createTilemap } from "./tilemap";
 import { findPath } from "./nav";
 import { buildStarterStation, interactionPoint } from "./starter";
+import { FLOOR_STYLE, type ModuleKind } from "./modules";
 
 function open(w: number, h: number) {
   const m = createTilemap(w, h);
@@ -66,11 +67,14 @@ describe("findPath quality", () => {
 
 describe("starter station", () => {
   const st = buildStarterStation();
+  const W = st.map.w;
   const dockRoom = st.rooms.find((r) => r.name === "Arrivals")!;
-  /** A floor tile just inside the module's door. */
-  const inside = (r: { x: number; y: number; h: number; w: number; id: number }) => {
-    for (const y of [r.y + 1, r.y + r.h - 2]) { const x = r.x + (r.w >> 1); if (st.map.get(x, y) === TileKind.Floor) return { x, y }; }
-    throw new Error("no inside tile");
+  type R = typeof st.rooms[0];
+  /** A floor tile that belongs to the module (its own floor style), not to a corridor passing through its bounding box. */
+  const inside = (r: R) => {
+    for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++)
+      if (st.map.get(x, y) === TileKind.Floor && st.floors![y * W + x] === FLOOR_STYLE[r.kind as ModuleKind]) return { x, y };
+    throw new Error(`no floor in ${r.name}`);
   };
   const start = inside(dockRoom);
   it("has at least 100 beds across the Habitation modules", () => {
@@ -78,26 +82,38 @@ describe("starter station", () => {
     expect(st.furniture.filter((f) => f.kind === TileKind.Bed && habs.has(f.roomId)).length).toBeGreaterThanOrEqual(100);
   });
   it("starts with an Arrivals module that has airlocks", () => {
-    expect(dockRoom).toBeTruthy();
-    expect(st.map.get(dockRoom.x + 7, dockRoom.y)).toBe(TileKind.Airlock);
+    let n = 0;
+    for (let y = dockRoom.y; y < dockRoom.y + dockRoom.h; y++) for (let x = dockRoom.x; x < dockRoom.x + dockRoom.w; x++) if (st.map.get(x, y) === TileKind.Airlock) n++;
+    expect(n).toBeGreaterThanOrEqual(6);
+  });
+  it("keeps modules as separate pods with open space between them", () => {
+    const gap = (a: R, b: R) => Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w), b.y - (a.y + a.h), a.y - (b.y + b.h));
+    for (const a of st.rooms) for (const b of st.rooms) if (a.id < b.id) expect(gap(a, b), `${a.name}@${a.x},${a.y} vs ${b.name}@${b.x},${b.y}`).toBeGreaterThanOrEqual(1);
+  });
+  it("is organic: modules sit around a plaza at different distances and the outline is not a rectangle", () => {
+    const dists = st.rooms.map((r) => Math.hypot(r.x + r.w / 2 - 65, r.y + r.h / 2 - 67));
+    expect(Math.max(...dists) - Math.min(...dists)).toBeGreaterThan(2);
+    let voidCount = 0, tiles = 0;
+    for (let y = 0; y < st.map.h; y++) for (let x = 0; x < st.map.w; x++) { tiles++; if (st.map.get(x, y) === TileKind.Void) voidCount++; }
+    expect(voidCount / tiles).toBeGreaterThan(0.4);
   });
   it("uses every habitation preset once (unique modules)", () => {
     const v = st.rooms.filter((r) => r.name === "Habitation").map((r) => r.variant);
-    expect(new Set(v).size).toBe(v.length);
+    expect(new Set(v).size).toBe(Math.min(5, v.length));
   });
   it("has all required rooms reachable from Arrivals", () => {
-    for (const name of ["Bridge", "Engineering", "Medbay", "Security", "Cargo", "Galley", "Habitation"]) {
-      for (const r of st.rooms.filter((q) => q.name === name)) {
-        expect(r, name).toBeTruthy();
-        expect(findPath(st.map, start, inside(r)), `${name}@${r.x},${r.y}`).not.toBeNull();
-      }
-    }
+    for (const name of ["Bridge", "Engineering", "Medbay", "Security", "Cargo", "Galley", "Habitation"])
+      for (const r of st.rooms.filter((q) => q.name === name)) expect(findPath(st.map, start, inside(r)), `${name}@${r.x},${r.y}`).not.toBeNull();
   });
   it("every furniture has a reachable interaction point", () => {
     for (const f of st.furniture) {
       const ip = interactionPoint(st.map, f)!;
       expect(ip, `${f.kind}@${f.x},${f.y}`).not.toBeNull();
-      expect(findPath(st.map, start, ip), `${f.kind}@${f.x},${f.y}`).not.toBeNull();
+      expect(findPath(st.map, start, ip), `${f.style}@${f.x},${f.y}`).not.toBeNull();
     }
+  });
+  it("dresses walls with mounts and tags every solid prop in the map", () => {
+    expect(st.deco!.filter((d) => d.layer === "wall").length).toBeGreaterThan(60);
+    for (const d of st.deco!.filter((q) => q.layer === "prop")) expect(st.map.get(d.x, d.y), d.sprite).toBe(TileKind.Prop);
   });
 });

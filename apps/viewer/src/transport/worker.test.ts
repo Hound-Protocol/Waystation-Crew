@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { ServerMsg } from "@wc/protocol";
 import { SimHost } from "../simhost";
 import { createWorkerTransport, type WorkerLike } from "./worker";
+import { STATION_W } from "@wc/sim-core";
 
 function loopbackWorker(host: SimHost): WorkerLike {
   const w: WorkerLike = {
@@ -24,7 +25,7 @@ describe("worker transport", () => {
     t.send({ t: "subscribe", viewport: { x: 0, y: 0, w: 60, h: 40, zoom: 3 } });
     await Promise.resolve();
     expect(got[0].t).toBe("snapshot");
-    if (got[0].t === "snapshot") { expect(got[0].chars.length).toBe(20); expect(got[0].w).toBe(64); }
+    if (got[0].t === "snapshot") { expect(got[0].chars.length).toBe(20); expect(got[0].w).toBe(STATION_W); }
   });
   it("advancing real time yields deltas", async () => {
     const { t, got, host } = collect();

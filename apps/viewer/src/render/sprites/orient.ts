@@ -21,3 +21,9 @@ export function wallSide(tiles: ArrayLike<number>, w: number, h: number, x: numb
   const l = at(x - 1, y), r = at(x + 1, y);
   return l && r ? "mid" : l ? "right" : r ? "left" : "single";
 }
+
+/** A door is vertical when walls continue above and below it (and not on both sides), as in a side wall of a shaped module. */
+export function doorIsVertical(tiles: ArrayLike<number>, w: number, h: number, x: number, y: number): boolean {
+  const wl = (xx: number, yy: number) => xx >= 0 && yy >= 0 && xx < w && yy < h && (tiles[yy * w + xx] === TileKind.Wall || tiles[yy * w + xx] === TileKind.Door);
+  return wl(x, y - 1) && wl(x, y + 1) && !(wl(x - 1, y) && wl(x + 1, y));
+}

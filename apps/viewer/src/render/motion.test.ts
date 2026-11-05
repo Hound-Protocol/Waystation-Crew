@@ -8,9 +8,9 @@ import { ClockSync } from "./clock";
 function walkTrace(path: "straight" | "corner") {
   const host = new SimHost({ seed: 1, population: 3, budgetMs: Infinity });
   const w = host.world, id = 0;
-  w.chars.x[id] = 2; w.chars.y[id] = 16;
-  const goal = path === "straight" ? { x: 56, y: 16 } : { x: 40, y: 17 };
-  const route = findPath(w.station.map, { x: 2, y: 16 }, goal)!;
+  w.chars.x[id] = 59; w.chars.y[id] = 73;
+  const goal = path === "straight" ? { x: 71, y: 73 } : { x: 70, y: 62 };
+  const route = findPath(w.station.map, { x: 59, y: 73 }, goal)!;
   w.actions[id] = { kind: ActionKind.Wander, furnitureId: -1, path: route.slice(), ticksLeft: 0 };
   const snap = host.snapshot() as any;
   const tracks = new Tracks(); tracks.reset(snap.chars);
@@ -26,7 +26,7 @@ function walkTrace(path: "straight" | "corner") {
 }
 
 describe("walking looks even end to end", () => {
-  it("moves at a steady speed with no pauses or jumps while walking a long straight corridor", () => {
+  it("moves at a steady speed with no pauses or jumps while walking a straight stretch of the plaza", () => {
     const { pts, route } = walkTrace("straight");
     const end = route[route.length - 1];
     const nominal = WALK_SPEED / 60;
@@ -36,7 +36,7 @@ describe("walking looks even end to end", () => {
       if (pts[i].x >= end.x - 0.6) break;                  // stop before the end: the rounded U-turn back (new wander path) legitimately slows
       steps.push(Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
     }
-    expect(steps.length).toBeGreaterThan(30 * 60);
+    expect(steps.length).toBeGreaterThan(7 * 60);
     expect(Math.min(...steps)).toBeGreaterThan(nominal * 0.5);   // never pauses
     expect(Math.max(...steps)).toBeLessThan(nominal * 1.6);      // never jumps
   });

@@ -9,7 +9,7 @@ import { DevPanel } from "./ui/devpanel";
 import { zoomLevel } from "./render/lod";
 import { ClockSync } from "./render/clock";
 import { DoorLayer } from "./render/doors";
-import { wallIsVertical } from "./render/sprites/orient";
+import { doorIsVertical } from "./render/sprites/orient";
 import { SpaceLayer } from "./render/space/layer";
 
 const BUILD = (import.meta as unknown as { env: Record<string, string> }).env.VITE_BUILD?.slice(0, 7) ?? "dev";
@@ -54,14 +54,14 @@ async function boot() {
   transport.onMessage((m: ServerMsg) => {
     if (m.t === "snapshot") {
       mapLayer.removeChildren();
-      mapLayer.addChild(new Sprite(canvasTexture(buildTileCanvas(m.w, m.h, m.tiles, m.rooms))));
-      doorLayer.reset(m.tiles, m.w, m.h, (x, y) => wallIsVertical(m.tiles, m.w, m.h, x, y));
+      mapLayer.addChild(new Sprite(canvasTexture(buildTileCanvas({ w: m.w, h: m.h, tiles: m.tiles, rooms: m.rooms, furniture: m.furniture, deco: m.deco, floors: m.floors }))));
+      doorLayer.reset(m.tiles, m.w, m.h, (x, y) => doorIsVertical(m.tiles, m.w, m.h, x, y));
       mapW = m.w; mapH = m.h; crew = m.chars.length;
       chars.reset(m.chars); tracks.reset(m.chars); panel.setChars(m.chars); if (selected !== null) select(null);
       renderTick = latestTick = m.tick; clock.reset(m.tick, speed);
       if (!fitted) {
         cam.fit(mapW, mapH, app.screen.width, app.screen.height);
-        if (cam.scale < 10) { cam.zoomAt(app.screen.width / 2, app.screen.height / 2, 10 / cam.scale); cam.centerOn(52, 9, app.screen.width, app.screen.height); }
+        if (cam.scale < 10) { cam.zoomAt(app.screen.width / 2, app.screen.height / 2, 10 / cam.scale); cam.centerOn(65, 20, app.screen.width, app.screen.height); }
         fitted = true;
       }
     } else if (m.t === "delta") {

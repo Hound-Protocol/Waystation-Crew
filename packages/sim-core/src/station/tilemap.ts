@@ -1,4 +1,4 @@
-export enum TileKind { Void, Floor, Wall, Door, Bed, Console, Table, Plant, Airlock }
+export enum TileKind { Void, Floor, Wall, Door, Bed, Console, Table, Plant, Airlock, Prop }
 
 export interface Point { x: number; y: number }
 

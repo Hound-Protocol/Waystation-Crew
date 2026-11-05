@@ -9,7 +9,7 @@ import { explain } from "./explain";
 describe("explain", () => {
   const setup = () => {
     const w = createWorld(1);
-    const id = addCharacter(w, { name: "Ada Silva", dept: Department.Service, rank: Rank.Trainee, x: 10, y: 18 });
+    const id = addCharacter(w, { name: "Ada Silva", dept: Department.Service, rank: Rank.Trainee, x: 62, y: 70 });
     w.chars.hunger[id] = 0.1; w.chars.energy[id] = 0.2; w.chars.fun[id] = 0.3; w.chars.nextDecideTick[id] = 0;
     stepAI(w);
     return { w, id };
@@ -30,7 +30,7 @@ describe("explain", () => {
   it("handles unknown ids and idle characters", () => {
     const { w } = setup();
     expect(explain(w, 999)).toEqual(["No such character"]);
-    const id2 = addCharacter(w, { name: "B", dept: Department.Service, rank: Rank.Trainee, x: 10, y: 18 });
+    const id2 = addCharacter(w, { name: "B", dept: Department.Service, rank: Rank.Trainee, x: 62, y: 70 });
     expect(explain(w, id2)[0]).toMatch(/^Now: Idle/);
   });
 });
