@@ -10,6 +10,7 @@ import { growIfNeeded, GROWTH_INTERVAL } from "./station/growth";
 import { createCharStore, hashChars, type CharStore } from "./ecs";
 import { createShipOps, stepShip, type ShipOps } from "./ship/ops";
 import { createLightOps, stepLights, type LightOps } from "./light/ops";
+import { createGrid, stepGrid, type PowerGrid } from "./power/grid";
 
 export type WorldEvent = { type: "moved"; id: number; from: Point; to: Point } | { type: "state"; id: number; state: number };
 
@@ -31,6 +32,8 @@ export interface World {
   ship: ShipOps;
   /** Engineering's lamp survey and build orders (see light/ops.ts) */
   light: LightOps;
+  /** the reactor, battery and what the station draws (see power/grid.ts) */
+  power: PowerGrid;
   recordEvents: boolean;
   events: WorldEvent[];
   /** extension point: hash contributors registered by subsystems */
@@ -50,7 +53,7 @@ export function createWorld(seed: number, station: Station = buildStarterStation
   }
   return {
     seed, tick: 0, rng: createRng(seed), chars: createCharStore(), station, furnitureByKind,
-    reservations: new Map(), actions: [], posts: buildJobPosts(station), postHolder: new Map(), stats: { decisions: 0 }, stationRev: 0, ship: createShipOps(station), light: createLightOps(station), recordEvents: false, events: [], hashers: [],
+    reservations: new Map(), actions: [], posts: buildJobPosts(station), postHolder: new Map(), stats: { decisions: 0 }, stationRev: 0, ship: createShipOps(station), light: createLightOps(station), power: createGrid(), recordEvents: false, events: [], hashers: [],
   };
 }
 
@@ -58,6 +61,7 @@ export function step(world: World): void {
   world.tick += 1;
   stepShip(world);
   stepLights(world);
+  stepGrid(world);
   decayNeeds(world);
   stepAI(world);
   stepMovement(world);
@@ -80,6 +84,7 @@ export function hashWorld(world: World): number {
   hashChars(world.chars, hasher);
   num(world.ship.slip); num(world.ship.crew.length); num(world.ship.holding ? 1 : 0);
   num(world.light.built); num(world.light.orders.length);
+  num(["offline", "starting", "running", "scram"].indexOf(world.power.reactor.status)); num(world.power.reactor.output); num(world.power.battery); num(world.power.fuelStore);
   for (const f of world.hashers) f(hasher);
   return h >>> 0;
 }
