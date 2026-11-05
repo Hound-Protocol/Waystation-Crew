@@ -27,6 +27,7 @@ import { Outline, ReticleGlyph } from "./render/reticlelayer";
 import { StatusLayer } from "./render/statusicons";
 import { OverviewCard, overviewFor, type BodyInfo } from "./ui/overview";
 import { StationCard } from "./ui/stationcard";
+import { ZoomMarkers } from "./render/zoommarkers";
 import { stationView } from "./ui/stationview";
 import { CrewTally } from "./ui/crewtally";
 import { SpaceLayer } from "./render/space/layer";
@@ -67,6 +68,7 @@ async function boot() {
   app.stage.addChild(space.root, world);
   const stationOutline = new Outline(), shipOutline = new Outline(), bodyOutline = new Outline(), glyph = new ReticleGlyph();
   world.addChild(stationOutline.g, bodyOutline.g); shipBody.addChild(shipOutline.g); app.stage.addChild(glyph.root);
+  const zoomMarkers = new ZoomMarkers(STATION_NAME); app.stage.addChildAt(zoomMarkers.root, app.stage.getChildIndex(glyph.root));
   const card = new OverviewCard(document.body);
   const stationCard = new StationCard(document.body);
   const tally = new CrewTally(); let stats: StatsSnap | null = null; let footprint = 0;
@@ -201,6 +203,7 @@ async function boot() {
       shipBody.position.set(pl.x * TILE, pl.y * TILE); shipBody.rotation = pl.rot; shipAt = pl; chars.place = aboardPlace(berth, pl);
       if (followShip) cam.followToward(pl.x, pl.y, app.screen.width, app.screen.height, dt);
     }
+    zoomMarkers.update(dt, cam, { x: mapW / 2, y: mapH / 2 }, berth ? shipAt : null);
     shipLayer.update(pose, time);
     const aboard = pose.at === "station" ? pose.stationGate : pose.at === "pad" ? pose.padGate : { v: 0, moving: false };   // the ship's gates follow the dock it sits at
     shipGates.update(time, { gate: aboard.v, gateMoving: aboard.moving });
