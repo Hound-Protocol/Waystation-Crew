@@ -13,6 +13,12 @@ Goal: a real place for the cargo ship to fly to, so we can test the full cycle (
 - It sticks to its schedule even half empty.
 - The game tracks whether each would-be passenger is in the boarding process (next to the ship / on the pad). If departure time arrives, anyone too far away and not on the pad is left behind; pilots take off on schedule.
 
+## Answers to the open questions (TrueMan)
+- **Timetable:** fixed round trip: station departure at fixed times, 10 min flight, 5 min planet wait, 10 min back, then a station dwell; one round trip per sim hour (tunable constant).
+- **Boarding:** a person counts as boarding when on the pad or within ~12 tiles of it heading to the ship. At departure anyone outside is left behind and re-queues for the next ship (never popped in or out).
+- **Descent:** real-scale flight on the true 600-tick path in map space; the planet gains tile-level surface detail near the pad as the camera follows the ship down (surface fades in, no pop).
+- **Pilots:** two Flight-department pilots (pilot + co-pilot), shift-based. With nobody on shift the ship stays docked and the schedule slips, shown in the PDA.
+
 ## Proposed slices (each tested + deployed)
 1. Pad chunk on the planet surface (sim-core data + viewer render, visible when zoomed in on the planet).
 2. Ship as a flying rigid body: undock (gates close, bars lock, burn), flight path with easing, landing on the pad, gates open. Replaces the stand-in 30-minute routine in `render/shipstate.ts` with real state from the sim.
