@@ -24,10 +24,11 @@ export interface PowerGrid {
   /** the battery is empty during a blackout */ lifeSupportDown: boolean;
   /** fuel waiting in storage for engineers to load, 0..1 */ fuelStore: number;
   /** who is on each reactor duty (see power/ops.ts) */ assign: PowerAssign;
+  /** doors forced open by hand during a blackout, and doors being forced right now (by whom, ticks left, last tick of work), both by tile index */ forced: Set<number>; forcing: Map<number, { by: number; left: number; last: number }>;
   /** cached counts, refreshed when the station changes */ cacheRev: number; lamps: number; machines: number;
 }
 
-export const createGrid = (): PowerGrid => ({ reactor: createReactor(), battery: 1, demand: 0, supply: 0, supplyLevel: 1, doorsPowered: true, lifeSupportDown: false, fuelStore: 0.3, assign: { watch: -1, refuel: -1, service: -1, restart: -1 }, cacheRev: -1, lamps: 0, machines: 0 });
+export const createGrid = (): PowerGrid => ({ reactor: createReactor(), battery: 1, demand: 0, supply: 0, supplyLevel: 1, doorsPowered: true, lifeSupportDown: false, fuelStore: 0.3, assign: { watch: -1, refuel: -1, service: -1, restart: -1 }, forced: new Set(), forcing: new Map(), cacheRev: -1, lamps: 0, machines: 0 });
 
 /** Total draw: lamps, machines (consoles) and the base load. Counts are cached until the station changes. */
 export function demand(w: World): number {
@@ -46,6 +47,7 @@ export function stepGrid(w: World): void {
   else if (g.supply >= g.demand && g.battery < 1) g.battery = Math.min(1, g.battery + 1 / GRID.chargeTicks);
   g.doorsPowered = shortfall === 0 || g.battery > 0;
   g.lifeSupportDown = !g.doorsPowered;
+  if (g.doorsPowered && (g.forced.size || g.forcing.size)) { g.forced.clear(); g.forcing.clear(); }      // power is back: the doors close and work normally again
 }
 
 /** A ship has just docked: its fuel goes into the store. */

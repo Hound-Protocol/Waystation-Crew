@@ -3,6 +3,7 @@ import { findPath } from "../station/nav";
 import { isWalkable } from "../station/tilemap";
 import { CharState } from "./affordances";
 import { blockedFor } from "../ship/ops";
+import { tryForce } from "../power/doors";
 
 function cancel(world: World, id: number): void {
   const a = world.actions[id];
@@ -42,6 +43,7 @@ export function stepMovement(world: World): void {
         if (!re || re.length === 0) { cancel(world, id); break; }
         a.path = re; next = re[0];
       }
+      if (!tryForce(world, id, next.x, next.y)) { c.walkAcc[id] = 0; break; }     // an unpowered door: forced by the first to arrive, the rest wait
       const from = { x: c.x[id], y: c.y[id] };
       if (isStill(next.x, next.y) && !(next.x === from.x && next.y === from.y)) {
         const goal = a.path[a.path.length - 1];

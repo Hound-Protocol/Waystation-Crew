@@ -86,7 +86,7 @@ export function hashWorld(world: World): number {
   hashChars(world.chars, hasher);
   num(world.ship.slip); num(world.ship.crew.length); num(world.ship.holding ? 1 : 0);
   num(world.light.built); num(world.light.orders.length);
-  num(["offline", "starting", "running", "scram"].indexOf(world.power.reactor.status)); num(world.power.reactor.output); num(world.power.battery); num(world.power.fuelStore);
+  num(["offline", "starting", "running", "scram"].indexOf(world.power.reactor.status)); num(world.power.reactor.output); num(world.power.battery); num(world.power.fuelStore); num(world.power.forced.size);
   for (const f of world.hashers) f(hasher);
   return h >>> 0;
 }
