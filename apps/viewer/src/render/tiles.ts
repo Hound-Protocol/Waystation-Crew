@@ -8,6 +8,7 @@ import { drawFloor } from "./sprites/floors";
 import { spriteFor, glowOf } from "./sprites/library";
 import { rotateN } from "./sprites/transform";
 import { bakeLighting, type Light } from "./light";
+import { EMISSIVE_KEYS } from "./sprites/palette";
 
 export const TILE = 16;
 
@@ -19,7 +20,10 @@ const isWall = (k: number) => k === TileKind.Wall || k === TileKind.Door;
 const wallCache = new Map<number, Img>();
 
 /** Everything static in the station, composed in layers and lit once: floors, floor decals, autotiled walls, furniture and props, wall mounts. */
-export function buildTileCanvas(inp: BakeInput): HTMLCanvasElement {
+export type TileCanvas = HTMLCanvasElement & { /** unlit builds only: alpha 255 where a pixel is emissive and must never be darkened */ emissive?: HTMLCanvasElement };
+
+/** `lit: false` skips the baked lighting: the light engine lights the canvas on the GPU instead and uses `emissive` to leave glowing pixels alone. */
+export function buildTileCanvas(inp: BakeInput, opts: { lit?: boolean } = {}): TileCanvas {
   const { w, h, tiles, rooms } = inp;
   const atlas = buildAtlas();
   const W = w * TILE, H = h * TILE;
@@ -59,10 +63,17 @@ export function buildTileCanvas(inp: BakeInput): HTMLCanvasElement {
   for (const r of rooms) lights.push({ x: (r.x + r.w / 2) * TILE, y: (r.y + r.h / 2) * TILE, r: Math.max(r.w, r.h) * TILE * 0.55, i: 0.5, c: [255, 170, 90] });
   // corridor and plaza lamps on a sparse grid
   if (inp.floors) for (let y = 3; y < h; y += 9) for (let x = 3; x < w; x += 9) { const st = inp.floors[y * w + x]; if (tiles[y * w + x] === TileKind.Floor && (st === 0 || st === 8)) lights.push({ x: x * TILE + 8, y: y * TILE + 8, r: 80, i: 0.6, c: [255, 190, 120] }); }
-  bakeLighting(data, W, H, lights, 0.5);
-  const cv = document.createElement("canvas");
+  let emissive: HTMLCanvasElement | undefined;
+  if (opts.lit === false) {
+    const em = new Uint8ClampedArray(W * H * 4);
+    for (let i = 0; i < W * H; i++) { const o = i * 4; if (data[o + 3] !== 0 && EMISSIVE_KEYS.has((data[o] << 16) | (data[o + 1] << 8) | data[o + 2])) em[o + 3] = 255; }
+    emissive = document.createElement("canvas"); emissive.width = W; emissive.height = H;
+    emissive.getContext("2d")!.putImageData(new ImageData(em, W, H), 0, 0);
+  } else bakeLighting(data, W, H, lights, 0.5);
+  const cv: TileCanvas = document.createElement("canvas");
   cv.width = W; cv.height = H;
   cv.getContext("2d")!.putImageData(new ImageData(new Uint8ClampedArray(data), W, H), 0, 0);
+  cv.emissive = emissive;
   return cv;
 }
 

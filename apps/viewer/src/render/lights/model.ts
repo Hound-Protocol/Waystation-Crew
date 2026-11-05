@@ -3,6 +3,8 @@ import type { LightSource } from "./types";
 
 export const LEVELS = [0.16, 0.28, 0.44, 0.62, 0.82, 1.0];
 export const AMBIENT = 0.5;
+/** How much of a light's colour is added on top of the brightness (the shader's TINT). */
+export const TINT_K = 0.12;
 /** Spot: full intensity inside SPOT_INNER * halfCone, fading to 0 at the cone edge. */
 export const SPOT_INNER = 0.8;
 /** Softness ramp bounds, in px per tile. */
@@ -87,4 +89,11 @@ export function quantize(v: number, soft: number): number {
 
 export function softness(scale: number): number {
   return smoothstep((scale - SOFT_MIN_SCALE) / (SOFT_MAX_SCALE - SOFT_MIN_SCALE));
+}
+
+/** Total light at a tile-space point: the ambient floor plus every light, and the colour tint (0..255 units, weighted by intensity). The shader sums the same way. */
+export function sampleLight(mask: Uint8Array, w: number, lights: readonly LightSource[], px: number, py: number): { L: number; tint: [number, number, number] } {
+  let L = AMBIENT; const tint: [number, number, number] = [0, 0, 0];
+  for (const l of lights) { const f = castLight(mask, w, l, px, py); if (f <= 0) continue; L += f; tint[0] += l.c[0] * f; tint[1] += l.c[1] * f; tint[2] += l.c[2] * f; }
+  return { L, tint };
 }

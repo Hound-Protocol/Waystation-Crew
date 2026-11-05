@@ -101,3 +101,18 @@ describe("softness", () => {
     expect(softness(25)).toBeLessThan(1);
   });
 });
+
+import { sampleLight, AMBIENT as AMB } from "./model";
+describe("sampleLight", () => {
+  const open = new Uint8Array(100);
+  const lamp = { id: 1, kind: "point" as const, x: 5.5, y: 5.5, r: 4, i: 0.9, c: [255, 200, 100] as [number, number, number] };
+  it("is the ambient floor with no lights", () => { expect(sampleLight(open, 10, [], 3, 3)).toEqual({ L: AMB, tint: [0, 0, 0] }); });
+  it("adds each light's shadowed intensity and its colour-weighted tint", () => {
+    const s = sampleLight(open, 10, [lamp], 5.5, 6.5), f = castLight(open, 10, lamp, 5.5, 6.5);
+    expect(s.L).toBeCloseTo(AMB + f, 9); expect(s.tint[0]).toBeCloseTo(255 * f, 6); expect(s.tint[2]).toBeCloseTo(100 * f, 6);
+  });
+  it("leaves a shadowed point at the ambient floor", () => {
+    const wall = new Uint8Array(100); wall[5 * 10 + 7] = 1;
+    expect(sampleLight(wall, 10, [{ ...lamp, x: 8.5 }], 6.5, 5.5).L).toBeCloseTo(AMB, 9);
+  });
+});
