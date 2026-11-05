@@ -48,7 +48,7 @@ describe("atlas", () => {
   it("has frames for every tile kind and every department suit", () => {
     const a = buildAtlas();
     for (let k = 0; k <= 8; k++) expect(a.frames[`tile:${k}`], `tile ${k}`).toBeTruthy();
-    for (let d = 0; d < 6; d++) for (let v = 0; v < 4; v++) expect(a.frames[`char:${d}:${v}`], `char ${d}:${v}`).toBeTruthy();
+    for (let d = 0; d < 6; d++) for (let v = 0; v < 4; v++) expect(a.frames[`char:${d}:${v}:0`], `char ${d}:${v}`).toBeTruthy();
     expect(a.data.length).toBe(a.width * a.height * 4);
   });
 });

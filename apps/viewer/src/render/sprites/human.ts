@@ -1,6 +1,21 @@
-import { Department } from "@wc/sim-core";
+import { Department, Rank } from "@wc/sim-core";
 import { Img } from "./image";
 import { hex, mul, OUT, CYAN, ORANGE, GREENE, RED, LAMP, type RGB } from "./palette";
+
+export type Tier = 0 | 1 | 2;
+export const tierOf = (r: Rank): Tier => (r === Rank.Chief ? 2 : r === Rank.Senior ? 1 : 0);
+export const BERET = hex("#f4f6f8");
+const GOLD = hex("#c9a227");
+type Look = { skin: string; hair: string; dept: Department; tier?: Tier };
+
+/** Rank marks: Senior = a sleeve stripe, Chief = white beret, collar and shoulder stripe. */
+function rankMarks(im: Img, o: Look, view: "front" | "back" | "side"): void {
+  const t = o.tier ?? 0; if (!t) return;
+  const mark = o.dept === Department.Medical ? RED : GOLD;
+  if (t === 1) { if (view === "side") im.px(7, 9, mark); else { im.px(5, 9, mark); im.px(10, 9, mark); } return; }
+  if (view === "side") { im.px(9, 7, mark); im.px(7, 8, mark); } else { if (view === "front") { im.px(7, 7, mark); im.px(8, 7, mark); } im.px(5, 8, mark); im.px(10, 8, mark); }
+  im.rect(4, 2, 10, 2, BERET); im.rect(5, 1, 10, 1, BERET); im.px(7, 0, BERET);
+}
 
 const PANTS = hex("#22262d"), PANTS_HI = hex("#2d323b"), PANTS_DK = hex("#15181d"), BOOT = hex("#0f1115");
 
@@ -31,7 +46,7 @@ const SUITS: Record<number, Suit> = {
     pants: PANTS, pantsHi: PANTS_HI, pantsDk: PANTS_DK },
 };
 
-export function drawHuman(o: { skin: string; hair: string; dept: Department }): Img {
+export function drawHuman(o: Look): Img {
   const s = SUITS[o.dept] ?? SUITS[Department.Service];
   const skin = hex(o.skin), hair = hex(o.hair), skDk = mul(skin, 0.75);
   const im = new Img();
@@ -47,6 +62,7 @@ export function drawHuman(o: { skin: string; hair: string; dept: Department }): 
   im.box(6, 11, 7, 13, s.pants, s.pantsHi, s.pantsDk); im.box(8, 11, 9, 13, s.pants, s.pantsHi, s.pantsDk);
   const bt = s.boots ?? BOOT; im.rect(5, 14, 7, 14, bt); im.rect(8, 14, 10, 14, bt); im.px(5, 14, hex("#262a31"));
   s.extra?.(im);
+  rankMarks(im, o, "front");
   return im.outline();
 }
 
@@ -62,7 +78,7 @@ function mirror(src: Img): Img {
 }
 
 /** Back view: all hair, no face, plain back with no chest light. */
-function drawBack(o: { skin: string; hair: string; dept: Department }): Img {
+function drawBack(o: Look): Img {
   const s = SUITS[o.dept] ?? SUITS[Department.Service];
   const skin = hex(o.skin), hair = hex(o.hair), skDk = mul(skin, 0.75);
   const im = new Img();
@@ -75,11 +91,12 @@ function drawBack(o: { skin: string; hair: string; dept: Department }): Img {
   im.box(6, 11, 7, 13, s.pants, s.pantsHi, s.pantsDk); im.box(8, 11, 9, 13, s.pants, s.pantsHi, s.pantsDk);
   const bt = s.boots ?? BOOT; im.rect(5, 14, 7, 14, bt); im.rect(8, 14, 10, 14, bt);
   if (o.dept === Department.Security) im.rect(5, 2, 10, 2, hex("#26282d"));
+  rankMarks(im, o, "back");
   return im.outline();
 }
 
 /** Right-facing profile (left is its mirror): face on the right, one arm and a stepping leg visible. */
-function drawSide(o: { skin: string; hair: string; dept: Department }): Img {
+function drawSide(o: Look): Img {
   const s = SUITS[o.dept] ?? SUITS[Department.Service];
   const skin = hex(o.skin), hair = hex(o.hair), skDk = mul(skin, 0.75);
   const im = new Img();
@@ -92,10 +109,11 @@ function drawSide(o: { skin: string; hair: string; dept: Department }): Img {
   im.box(6, 11, 7, 13, s.pantsDk, s.pants, s.pantsDk); im.box(8, 11, 9, 13, s.pants, s.pantsHi, s.pantsDk); // legs sit under the torso (x 6..9)
   const bt = s.boots ?? BOOT; im.rect(5, 14, 7, 14, bt); im.rect(8, 14, 10, 14, bt);                                    // toes point forward by one pixel
   if (o.dept === Department.Security) im.rect(5, 2, 10, 2, hex("#26282d"));
+  rankMarks(im, o, "side");
   return im.outline();
 }
 
-export function drawHumanDir(o: { skin: string; hair: string; dept: Department }, dir: FacingDir): Img {
+export function drawHumanDir(o: Look, dir: FacingDir): Img {
   switch (dir) {
     case "down": return drawHuman(o);
     case "up": return drawBack(o);

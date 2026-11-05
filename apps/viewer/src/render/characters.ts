@@ -5,7 +5,8 @@ import { TILE } from "./tiles";
 import type { Tracks } from "./interp";
 import type { Camera } from "./camera";
 import { lodStyle, zoomLevel, type LodStyle } from "./lod";
-import { WALK_SPEED } from "@wc/sim-core";
+import { WALK_SPEED, type Rank } from "@wc/sim-core";
+import { tierOf } from "./sprites/human";
 
 interface View { body: Sprite; head: Sprite; dept: number }
 const STYLES: LodStyle[] = ["dot", "column", "silhouette", "sprite"];
@@ -16,6 +17,7 @@ export class CharLayer {
   private layers = new Map<LodStyle, { c: Container; views: View[]; alpha: number }>();
   ids: number[] = [];
   private depts: number[] = [];
+  private tiers: number[] = [];
   private fade: number[] = [];
   private known = new Set<number>();
   private lane: Array<{ x: number; y: number }> = [];   // eased lane offset in tiles, perpendicular to travel
@@ -29,19 +31,24 @@ export class CharLayer {
   constructor() {
     for (const s of STYLES) { const c = new Container(); c.visible = s === "dot"; this.root.addChild(c); this.layers.set(s, { c, views: [], alpha: s === "dot" ? 1 : 0 }); }
   }
-  reset(chars: Array<{ id: number; dept: number }>) {
-    this.ids = chars.map((c) => c.id); this.depts = chars.map((c) => c.dept);
+  reset(chars: Array<{ id: number; dept: number; rank?: Rank }>) {
+    this.ids = chars.map((c) => c.id); this.depts = chars.map((c) => c.dept); this.tiers = chars.map((c) => (c.rank === undefined ? 0 : tierOf(c.rank)));
     const first = this.known.size === 0;
     this.fade = this.ids.map((id) => (first || this.known.has(id) ? 1 : 0)); // newcomers fade in
     this.known = new Set(this.ids);
     this.bob = this.ids.map(() => 0); this.lane = this.ids.map(() => ({ x: 0, y: 0 })); this.shade = this.ids.map(() => 1); this.last = this.ids.map(() => null);
     for (const l of this.layers.values()) { l.c.removeChildren(); l.views = []; }
   }
+  /** Atlas key `char:<dept>:<variant>:<tier>[:<dir>]`. */
+  private key(i: number, dir: string): string {
+    const k = `char:${this.depts[i]}:${this.ids[i] % 4}:${this.tiers[i] ?? 0}`;
+    return dir === "down" ? k : `${k}:${dir}`;
+  }
   private ensure(style: LodStyle) {
     const l = this.layers.get(style)!;
     while (l.views.length < this.ids.length) {
       const i = l.views.length;
-      const tex = style === "sprite" ? this.textures?.get(`char:${this.depts[i]}:${this.ids[i] % 4}`) : undefined;
+      const tex = style === "sprite" ? this.textures?.get(this.key(i, "down")) : undefined;
       const body = new Sprite(tex ?? Texture.WHITE), head = new Sprite(Texture.WHITE);
       body.tint = tex ? 0xffffff : DEPT_COLOR[this.depts[i]] ?? 0xffffff; head.tint = SKIN;
       if (style === "dot") { body.width = TILE * 0.9; body.height = TILE * 0.9; body.anchor.set(0.5); head.visible = false; }
@@ -102,7 +109,7 @@ export class CharLayer {
         else if (s === "column") { v.body.position.set(px, py + TILE * 0.4); }
         else if (spr) {
           v.body.position.set(px, py);
-          const tx = this.textures!.get(p.dir === "down" ? `char:${v.dept}:${this.ids[i] % 4}` : `char:${v.dept}:${this.ids[i] % 4}:${p.dir}`);
+          const tx = this.textures!.get(this.key(i, p.dir));
           if (tx && v.body.texture !== tx) v.body.texture = tx;
         }
         else { v.body.position.set(px, py + TILE * 0.45); v.head.position.set(px, py + TILE * 0.45 - TILE * 0.5); }

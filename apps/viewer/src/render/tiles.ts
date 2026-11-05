@@ -85,7 +85,7 @@ export function canvasTexture(cv: HTMLCanvasElement): Texture {
   return t;
 }
 
-/** Character frames from the generated atlas: `char:<dept>:<variant>`. */
+/** Character frames from the generated atlas: `char:<dept>:<variant>:<tier>[:<dir>]`. */
 export function characterTextures(): Map<string, Texture> {
   const atlas = buildAtlas();
   const cv = document.createElement("canvas");

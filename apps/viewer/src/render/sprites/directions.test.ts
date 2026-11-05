@@ -4,7 +4,7 @@ import { buildAtlas } from "./atlas";
 const a = buildAtlas();
 const px = (k: string, x: number, y: number) => { const f = a.frames[k], i = ((f.y + y) * a.width + f.x + x) * 4; return [a.data[i], a.data[i + 1], a.data[i + 2], a.data[i + 3]].join(","); };
 const diff = (k1: string, k2: string, y0 = 0, y1 = 15) => { let n = 0; for (let y = y0; y <= y1; y++) for (let x = 0; x < 16; x++) if (px(k1, x, y) !== px(k2, x, y)) n++; return n; };
-const key = (d: number, v: number, dir: string) => (dir === "down" ? `char:${d}:${v}` : `char:${d}:${v}:${dir}`);
+const key = (d: number, v: number, dir: string) => (dir === "down" ? `char:${d}:${v}:0` : `char:${d}:${v}:0:${dir}`);
 
 describe("four-direction character sprites", () => {
   it("every department and look has up / down / left / right frames", () => {
