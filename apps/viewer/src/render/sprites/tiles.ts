@@ -20,6 +20,23 @@ function wall(): Img {
   for (const [x, y] of [[3, 5], [12, 5], [3, 9], [12, 9]]) im.px(x, y, hex("#5a6070"));
   return im;
 }
+/** Native vertical wall (runs top to bottom). Sides: lit left face, shadowed right face with a hazard stripe running down it. */
+export function wallVertical(side: "single" | "left" | "mid" | "right" = "single"): Img {
+  const L = side === "single" || side === "left", R = side === "single" || side === "right";
+  const im = new Img();
+  im.rect(0, 0, 15, 15, hex("#2e323b"));
+  if (L) { im.rect(0, 0, 0, 15, hex("#4d5361")); im.rect(1, 0, 1, 15, hex("#3c414d")); im.rect(2, 0, 2, 15, hex("#252830")); }
+  const pl = L ? 4 : 1, pr = R ? 10 : 14;
+  for (const y0 of [1, 9]) { im.rect(pl, y0, pr, y0 + 5, hex("#252830")); im.rect(pl, y0, pr, y0, hex("#1b1d23")); im.rect(pl + 1, y0 + 1, pr - 1, y0 + 4, hex("#2a2d36")); }
+  im.rect(pl - 1 < 0 ? 0 : pl - 1, 7, pr, 7, hex("#1b1d23")); im.rect(pl - 1 < 0 ? 0 : pl - 1, 15, pr, 15, hex("#1b1d23"));
+  for (const x of [pl + 1, pr - 1]) for (const y of [3, 11]) im.px(x, y, hex("#5a6070"));
+  if (R) {
+    im.rect(11, 0, 11, 15, hex("#16181d"));
+    for (let y = 0; y < 16; y++) for (const x of [12, 13]) im.px(x, y, (x + y) % 4 < 2 ? hex("#b8941f") : hex("#15171b"));
+    im.rect(14, 0, 14, 15, hex("#16181d")); im.rect(15, 0, 15, 15, hex("#0d0e12"));
+  }
+  return im;
+}
 function door(): Img {
   const im = floor();
   im.rect(0, 3, 15, 4, hex("#16181d")); im.rect(0, 11, 15, 12, hex("#16181d"));

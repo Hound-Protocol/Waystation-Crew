@@ -9,7 +9,7 @@ function dirOf(a: Point, b: Point, fallback: Dir): Dir {
   return fallback;
 }
 
-const CORNER = 0.4; // corner cut radius in tiles (< 0.5 so neighbouring corners never overlap)
+const CORNER = 0.5; // corner cut radius in tiles (0.5: round as possible while neighbouring corners still never overlap)
 const sgn = (v: number) => (v > 0 ? 1 : v < 0 ? -1 : 0);
 const domDir = (dx: number, dy: number, fallback: Dir): Dir =>
   Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? "right" : dx < 0 ? "left" : fallback) : dy > 0 ? "down" : "up";
