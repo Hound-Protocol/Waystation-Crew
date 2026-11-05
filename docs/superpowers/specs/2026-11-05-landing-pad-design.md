@@ -21,7 +21,7 @@ Goal: a real place for the cargo ship to fly to, so we can test the full cycle (
 
 ## Proposed slices (each tested + deployed)
 1. Pad chunk on the planet surface (sim-core data + viewer render, visible when zoomed in on the planet).
-2. Ship as a flying rigid body: undock (gates close, bars lock, burn), flight path with easing, landing on the pad, gates open. Replaces the stand-in 30-minute routine in `render/shipstate.ts` with real state from the sim.
+2. Ship as a flying rigid body (design: `2026-11-05-ship-flight-design.md`, split 2a empty flight / 2b pilots): undock (gates close, bars lock, burn), flight path with easing, landing on the pad, gates open. Replaces the stand-in 30-minute routine in `render/shipstate.ts` with real state from the sim.
 3. Dev panel "call a ship" + automatic schedule.
 4. Cargo/people loading at the pad (later, with the outpost).
 
