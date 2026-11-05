@@ -5,6 +5,7 @@ import { deriveLights } from "./sources";
 import { solidMask } from "./occluders";
 import { softness, sampleLight, quantize, TINT_K } from "./model";
 import { pickLights } from "./pick";
+import { LightFade } from "./fade";
 import { FRAGMENT, VERTEX, MAX_LIGHTS, MAX_STEPS } from "./shader";
 import type { LightSource } from "./types";
 
@@ -15,7 +16,7 @@ const nearest = (cv: HTMLCanvasElement): Texture => { const t = Texture.from(cv)
 /** GPU lighting for the station canvas: a filter on the map layer that lights each pixel from the visible lights, with shadows from the solid-tile mask. */
 export class LightPass {
   readonly filter: Filter;
-  private all: LightSource[] = [];
+  private readonly fade = new LightFade();
   private mapW = 1; private mapH = 1;
   private mask: Texture; private emis: Texture;
   /** kept for the parity probe */
@@ -43,7 +44,7 @@ export class LightPass {
 
   /** Call whenever the station is rebuilt. `canvas` is the unlit tile canvas from `buildTileCanvas(inp, { lit: false })`. */
   setStation(inp: BakeInput, canvas: TileCanvas): void {
-    this.all = deriveLights(inp); this.mapW = inp.w; this.mapH = inp.h;
+    this.fade.sync(deriveLights(inp)); this.mapW = inp.w; this.mapH = inp.h;
     const mask = solidMask(inp); this.maskData = mask as Uint8Array<ArrayBuffer>; this.canvas = canvas; const cv = document.createElement("canvas"); cv.width = inp.w; cv.height = inp.h;
     const ctx = cv.getContext("2d")!, img = ctx.createImageData(inp.w, inp.h);
     for (let i = 0; i < mask.length; i++) { img.data[i * 4] = mask[i] ? 255 : 0; img.data[i * 4 + 3] = 255; }
@@ -53,9 +54,11 @@ export class LightPass {
   }
 
   /** Per frame: pick the visible lights and upload them. `tx, ty, scale` are the camera (screen = tile * scale + t); `res` is the renderer resolution. */
-  update(tx: number, ty: number, scale: number, viewW: number, viewH: number, res: number): void {
+  update(dt: number, tx: number, ty: number, scale: number, viewW: number, viewH: number, res: number): void {
+    this.fade.step(dt);
     const view = { x0: -tx / scale, y0: -ty / scale, x1: (viewW - tx) / scale, y1: (viewH - ty) / scale };
-    this.active = pickLights(this.all, view, this.budget.maxLights);
+    const live = this.fade.entries().filter((e) => e.f > 0).map((e) => (e.f === 1 ? e.light : { ...e.light, i: e.light.i * e.f }));   // fading lights carry their fade in their intensity
+    this.active = pickLights(live, view, this.budget.maxLights);
     let n = 0;
     for (const l of this.active) {
       this.lights.set([l.x, l.y, l.r, l.i], n * 4); this.colors.set([l.c[0] / 255, l.c[1] / 255, l.c[2] / 255, l.kind === "spot" ? 1 : 0], n * 4); this.aim.set([l.dir ?? 0, l.cone ?? Math.PI, 1, 0], n * 4); n++;

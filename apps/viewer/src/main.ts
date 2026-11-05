@@ -177,7 +177,7 @@ async function boot() {
     if (fitted) worldA = Math.min(1, worldA + dt / 0.7);
     world.alpha = worldA * worldA * (3 - 2 * worldA);
     world.scale.set(cam.scale / TILE); world.position.set(cam.tx, cam.ty);
-    lightPass.update(cam.tx, cam.ty, cam.scale, app.screen.width, app.screen.height, app.renderer.resolution);
+    lightPass.update(dt, cam.tx, cam.ty, cam.scale, app.screen.width, app.screen.height, app.renderer.resolution);
     solar.update(dt, renderTick, cam.scale);
     const time = performance.now() / 1000, pose = shipPose(shipHold ?? renderTick - shipSlip);
     if (berth) {
