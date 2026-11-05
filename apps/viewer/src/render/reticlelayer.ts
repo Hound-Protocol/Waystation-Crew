@@ -2,7 +2,7 @@ import { Container, Graphics } from "pixi.js";
 import { TILE } from "./tiles";
 import type { Edge, Pt } from "./reticle";
 
-const CYAN = 0x4de1ff;
+const WHITE = 0xffffff;
 const smooth = (t: number) => t * t * (3 - 2 * t);
 
 /** An outline that eases in and out (no pop-ins). Lives in tile coordinates of whatever container it is added to. */
@@ -16,12 +16,12 @@ export class Outline {
     this.edges = edges; this.circle = null; this.g.clear();
     for (const [w, al] of [[this.w * 2.7, 0.14], [this.w, 0.9]] as const) {
       for (const e of edges) this.g.moveTo(e.x1 * TILE, e.y1 * TILE).lineTo(e.x2 * TILE, e.y2 * TILE);
-      this.g.stroke({ color: CYAN, width: w * TILE, alpha: al, cap: "square", join: "miter" });
+      this.g.stroke({ color: WHITE, width: w * TILE, alpha: al, cap: "square", join: "miter" });
     }
   }
   setCircle(c: Pt, r: number) {
     this.circle = { c, r }; this.edges = null; this.g.clear();
-    for (const [w, al] of [[this.w * 2.7, 0.14], [this.w, 0.9]] as const) this.g.circle(c.x * TILE, c.y * TILE, r * TILE).stroke({ color: CYAN, width: w * TILE, alpha: al });
+    for (const [w, al] of [[this.w * 2.7, 0.14], [this.w, 0.9]] as const) this.g.circle(c.x * TILE, c.y * TILE, r * TILE).stroke({ color: WHITE, width: w * TILE, alpha: al });
   }
   update(dt: number, on: boolean) {
     this.a += ((on ? 1 : 0) - this.a) * (1 - Math.exp(-dt * 12));

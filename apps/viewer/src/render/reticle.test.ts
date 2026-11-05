@@ -10,11 +10,11 @@ describe("reticle zone", () => {
     for (const z of [1, 2, 3, 4] as const) expect(overviewActive(z), `Z${z}`).toBe(true);
     for (const z of [5, 6] as const) expect(overviewActive(z), `Z${z}`).toBe(false);
   });
-  it("the outline stays about 2 screen pixels thick at any zoom, within sane limits", () => {
-    expect(outlineWidth(48)).toBeCloseTo(0.11, 9);      // close in: the thin default
-    expect(outlineWidth(8)).toBeCloseTo(2.2 / 8, 9);
-    expect(outlineWidth(5)).toBeCloseTo(0.44, 9);
-    expect(outlineWidth(0.1)).toBe(0.5);                // never fatter than half a tile
+  it("the outline stays about 1 screen pixel thick at any zoom, within sane limits", () => {
+    expect(outlineWidth(48)).toBeCloseTo(0.055, 9);     // close in: the thin default
+    expect(outlineWidth(16)).toBeCloseTo(1.1 / 16, 9);
+    expect(outlineWidth(5)).toBeCloseTo(0.22, 9);
+    expect(outlineWidth(0.1)).toBe(0.25);               // never fatter than a quarter tile
   });
 });
 
