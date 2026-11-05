@@ -3,6 +3,7 @@ import type { Station } from "../station/starter";
 import { TileKind } from "../station/tilemap";
 import { Department } from "./departments";
 import { Rank } from "./ranks";
+import { flightSeats, postRole, type FlightSeats } from "../ship/crew";
 
 export type Shift = "day" | "swing" | "night";
 export const SHIFTS: Shift[] = ["day", "swing", "night"];
@@ -43,24 +44,29 @@ export function jobOf(world: World, id: number): JobPost | null {
   return j >= 0 ? world.posts[j] : null;
 }
 
-function take(world: World, id: number, dept: Department | null): boolean {
-  for (const p of world.posts) {
-    if ((dept !== null && p.dept !== dept) || world.postHolder.has(p.id) || world.chars.rank[id] < p.minRank) continue;
-    world.postHolder.set(p.id, id);
-    world.chars.job[id] = p.id;
-    return true;
+/** Open post for this character, or null. Flight crew are spread over the shifts, pilot and co-pilot seats before the engineer's; nobody else is ever given a Flight post. */
+function take(world: World, id: number, dept: Department | null, seats: FlightSeats | null): boolean {
+  const open = world.posts.filter((p) => (dept === null ? p.dept !== Department.Flight : p.dept === dept) && !world.postHolder.has(p.id) && world.chars.rank[id] >= p.minRank);
+  if (!open.length) return false;
+  let best = open[0];
+  if (dept === Department.Flight) {
+    const filled = (shift: Shift) => world.posts.filter((p) => p.dept === Department.Flight && p.shift === shift && world.postHolder.has(p.id)).length;
+    const key = (p: JobPost) => (postRole(seats, p) === "engineer" ? 1000 : 0) + filled(p.shift) * 10;
+    best = open.reduce((m, p) => (key(p) < key(m) ? p : m), open[0]);
   }
-  return false;
+  world.postHolder.set(best.id, id);
+  world.chars.job[id] = best.id;
+  return true;
 }
 
 /** Fill open posts for unassigned characters: own department first, then Service, then any open post their rank allows, else stay unassigned. */
 export function assignJobs(world: World, posts: JobPost[] = world.posts): void {
   void posts;
-  const c = world.chars;
+  const c = world.chars, seats = flightSeats(world.station);
   for (let id = 0; id < c.count; id++) {
     if (c.job[id] >= 0) continue;
-    if (take(world, id, c.dept[id])) continue;
-    if (c.dept[id] !== Department.Service && take(world, id, Department.Service)) continue;
-    take(world, id, null);     // last resort: any open post whose rank gate they meet
+    if (take(world, id, c.dept[id], seats)) continue;
+    if (c.dept[id] !== Department.Service && take(world, id, Department.Service, seats)) continue;
+    take(world, id, null, seats);     // last resort: any open post whose rank gate they meet
   }
 }

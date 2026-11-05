@@ -1,5 +1,5 @@
 import { ShipLayer, shipFixtures } from "./render/ship";
-import { shipPlacement, type Rect } from "./render/shipbody";
+import { shipPlacement, aboardPlace, type Rect } from "./render/shipbody";
 import { GateLayer } from "./render/gates";
 import { PadLayer, padOrigin } from "./render/padlayer";
 import type { TileKind } from "@wc/sim-core";
@@ -60,6 +60,7 @@ async function boot() {
 
   const fades: Sprite[] = [];
   let shipHold: number | null = null;   // dev hook: freeze the ship at a tick of its round trip
+  let shipSlip = 0, shipHolding = false;
   let berth: Rect | null = null, followShip = false, shipAt = { x: 0, y: 0 };
   const transport: SimTransport = createWorkerTransport();
   const select = (id: number | null) => {
@@ -90,6 +91,7 @@ async function boot() {
         shipGates.reset(sh.tiles, sh.w, sh.h);
         shipBody.pivot.set((sh.w * TILE) / 2, (sh.h * TILE) / 2); berth = sh.berth; shipBody.visible = true;
       }
+      if (m.shipStatus) { shipSlip = m.shipStatus.slip; shipHolding = m.shipStatus.holding; }
       mapW = m.w; mapH = m.h; crew = m.chars.length;
       chars.reset(m.chars); tracks.reset(m.chars); panel.setChars(m.chars); if (selected !== null) select(null);
       renderTick = latestTick = m.tick; clock.reset(m.tick, speed);
@@ -106,6 +108,7 @@ async function boot() {
       gateLayer.reset(m.tiles, m.w, m.h);
       mapW = m.w; mapH = m.h;
     } else if (m.t === "delta") {
+      if (m.shipStatus) { shipSlip = m.shipStatus.slip; shipHolding = m.shipStatus.holding; }
       tracks.apply(m.moves); tracks.prune(m.tick - 120); latestTick = m.tick; speed = m.clock.speed; paused = m.clock.paused;
       panel.updateStates(m.states); panel.setClock(paused);
     } else if (m.id === selected) { panel.setInspect(m.lines); if (m.profile) pda.update(m.profile); }
@@ -125,7 +128,7 @@ async function boot() {
     if (down.moved >= 5 && ptrs.size === 0 && performance.now() - vel.t < 80) cam.fling(vel.x, vel.y);
     if (down.moved < 5 && ptrs.size === 0) {
       const w = cam.screenToWorld(e.offsetX, e.offsetY); let best: number | null = null, bd = 1.2;
-      for (let id = 0; id < crew; id++) { const p = tracks.positionAt(id, renderTick); if (!p) continue; const d = Math.hypot(p.x + 0.5 - w.x, p.y + 0.5 - w.y); if (d < bd) { bd = d; best = id; } }
+      for (let id = 0; id < crew; id++) { const p0 = tracks.positionAt(id, renderTick); if (!p0) continue; const p = chars.place ? chars.place(p0.x, p0.y) : p0; const d = Math.hypot(p.x + 0.5 - w.x, p.y + 0.5 - w.y); if (d < bd) { bd = d; best = id; } }
       select(best);
     }
   });
@@ -145,7 +148,7 @@ async function boot() {
     const dt = Math.min(t.deltaMS / 1000, 0.1);
     renderTick = clock.update(dt, latestTick, speed, paused);
     cam.update(dt);
-    if (follow && selected !== null) { const p = tracks.positionAt(selected, renderTick); if (p) cam.followToward(p.x + 0.5, p.y + 0.5, app.screen.width, app.screen.height, dt); }
+    if (follow && selected !== null) { const p0 = tracks.positionAt(selected, renderTick), p = p0 && chars.place ? chars.place(p0.x, p0.y) : p0; if (p) cam.followToward(p.x + 0.5, p.y + 0.5, app.screen.width, app.screen.height, dt); }
     cam.clampRect(mapW / 2 - SYSTEM_EXTENT, mapH / 2 - SYSTEM_EXTENT, SYSTEM_EXTENT * 2, SYSTEM_EXTENT * 2, app.screen.width, app.screen.height);
     for (let i = fades.length - 1; i >= 0; i--) {
       const f = fades[i]; f.alpha = Math.min(1, f.alpha + dt / 1.2);
@@ -155,11 +158,11 @@ async function boot() {
     world.alpha = worldA * worldA * (3 - 2 * worldA);
     world.scale.set(cam.scale / TILE); world.position.set(cam.tx, cam.ty);
     solar.update(dt, renderTick, cam.scale);
-    const time = performance.now() / 1000, pose = shipPose(shipHold ?? renderTick);
+    const time = performance.now() / 1000, pose = shipPose(shipHold ?? renderTick - shipSlip);
     if (berth) {
       const pad = padOrigin(), padBerth = { x: pad.x + PAD.berth.x, y: pad.y + PAD.berth.y, w: PAD.berth.w, h: PAD.berth.h };
       const pl = shipPlacement(pose, berth, padBerth);
-      shipBody.position.set(pl.x * TILE, pl.y * TILE); shipBody.rotation = pl.rot; shipAt = pl;
+      shipBody.position.set(pl.x * TILE, pl.y * TILE); shipBody.rotation = pl.rot; shipAt = pl; chars.place = aboardPlace(berth, pl);
       if (followShip) cam.followToward(pl.x, pl.y, app.screen.width, app.screen.height, dt);
     }
     shipLayer.update(pose, time);
@@ -168,7 +171,7 @@ async function boot() {
     padLayer.update(time, cam.scale, { gate: pose.padGate.v, gateMoving: pose.padGate.moving });
     space.update(dt, cam.tx, cam.ty, app.screen.width, app.screen.height);
     if (selected !== null) {
-      const p = tracks.positionAt(selected, renderTick);
+      const p0 = tracks.positionAt(selected, renderTick), p = p0 && chars.place ? chars.place(p0.x, p0.y) : p0;
       if (p) { markerPos = markerPos ? { x: markerPos.x + (p.x - markerPos.x) * (1 - Math.exp(-dt * 20)), y: markerPos.y + (p.y - markerPos.y) * (1 - Math.exp(-dt * 20)) } : { x: p.x, y: p.y }; marker.position.set(markerPos.x * TILE, markerPos.y * TILE); }
     }
     markerA += ((selected !== null ? 1 : 0) - markerA) * (1 - Math.exp(-dt * 14));
@@ -177,7 +180,7 @@ async function boot() {
     doorLayer.update(dt, chars.ids, (id) => tracks.positionAt(id, renderTick));
     chars.update(dt, renderTick, tracks, cam, app.screen.width, app.screen.height);
     const d = Math.floor((latestTick + 21600) / 86400) + 1, h = Math.floor(((latestTick / 3600) + 6) % 24), m = Math.floor((latestTick / 60) % 60);
-    hud.innerHTML = `<b>${STATION_NAME}</b> · day ${d} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} · crew ${crew} · Z${zoomLevel(cam.scale)}${paused ? " · paused" : ""}${speed !== 1 ? ` · ${speed}x` : ""}`;
+    hud.innerHTML = `<b>${STATION_NAME}</b> · day ${d} ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")} · crew ${crew} · Z${zoomLevel(cam.scale)}${paused ? " · paused" : ""}${shipHolding ? " · ship waiting for pilots" : ""}${speed !== 1 ? ` · ${speed}x` : ""}`;
   });
   (window as unknown as { __wc: unknown }).__wc = { cam, transport, holdShip: (tick: number | null) => { shipHold = tick; }, shipAt: () => shipAt };
 }

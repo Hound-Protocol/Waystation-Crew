@@ -38,6 +38,24 @@ describe("worker transport", () => {
     expect(sh.berth).toEqual(src.berth);
     expect(sh.rooms.map((r) => r.name)).toEqual(["Cargo Ship"]); expect(sh.deco.length).toBe(src.deco!.length); expect(sh.floors.length).toBe(36 * 23);
   });
+  it("the station the viewer bakes has the ship's berth left empty: the ship is drawn as a body of its own", async () => {
+    const { t, got } = collect();
+    t.send({ t: "subscribe", viewport: { x: 0, y: 0, w: 60, h: 40, zoom: 3 } });
+    await Promise.resolve();
+    const m = got[0]; if (m.t !== "snapshot") throw new Error("no snapshot");
+    const b = m.ship!.berth;
+    for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) expect(m.tiles[y * m.w + x], `${x},${y}`).toBe(0);
+    const inside = (d: { x: number; y: number }) => d.x >= b.x && d.x < b.x + b.w && d.y >= b.y && d.y < b.y + b.h;
+    expect(m.deco!.some(inside)).toBe(false); expect(m.furniture.some(inside)).toBe(false);
+    expect(m.rooms.some((r) => r.name === "Cargo Ship")).toBe(false);
+    expect(m.shipStatus).toEqual({ slip: 0, holding: false });
+  });
+  it("deltas carry the ship's schedule slip, and say when it is waiting for pilots", () => {
+    const host = new SimHost({ seed: 1, population: 20, budgetMs: Infinity });
+    host.handle({ t: "subscribe", viewport: { x: 0, y: 0, w: 60, h: 40, zoom: 3 } });
+    const d = host.advanceReal(30)!;
+    expect(d.shipStatus).toEqual({ slip: 0, holding: false });
+  });
   it("advancing real time yields deltas", async () => {
     const { t, got, host } = collect();
     t.send({ t: "subscribe", viewport: { x: 0, y: 0, w: 60, h: 40, zoom: 3 } });

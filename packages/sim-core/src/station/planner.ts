@@ -8,15 +8,13 @@ import type { Rng } from "../rng";
 
 /** Floor-style value marking solid hull filler: wall tiles that a new room may replace. */
 export const FILLER = 255;
-/** Marks void cells reserved for the ship berth: never built over, never sealed into hull filler. */
-export const BERTH = 254;
 const FACINGS: Dir[] = [{ x: 0, y: 1 }, { x: 0, y: -1 }, { x: 1, y: 0 }, { x: -1, y: 0 }];
 const N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
 export interface Hall { x0: number; y0: number; x1: number; y1: number }   // axis-aligned centre line; three tiles wide
 
 const isFree = (map: Tilemap, floors: Uint8Array, x: number, y: number) => {
   const k = map.get(x, y);
-  return (k === TileKind.Void && floors[y * map.w + x] !== BERTH) || (k === TileKind.Wall && floors[y * map.w + x] === FILLER);
+  return k === TileKind.Void || (k === TileKind.Wall && floors[y * map.w + x] === FILLER);
 };
 const isPublic = (map: Tilemap, floors: Uint8Array, x: number, y: number) =>
   map.inBounds(x, y) && map.get(x, y) === TileKind.Floor && (floors[y * map.w + x] === 0 || floors[y * map.w + x] === 8);
@@ -161,7 +159,7 @@ export function sealHull(st: Station): void {
   const mark = (x: number, y: number) => { if (map.inBounds(x, y) && map.get(x, y) === TileKind.Void && !open[y * W + x]) { open[y * W + x] = 1; stack.push(y * W + x); } };
   for (let i = 0; i < W; i++) { mark(i, 0); mark(i, H - 1); mark(0, i); mark(W - 1, i); }
   while (stack.length) { const k = stack.pop()!, x = k % W, y = Math.floor(k / W); for (const [dx, dy] of N4) mark(x + dx, y + dy); }
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (map.get(x, y) === TileKind.Void && floors[y * W + x] !== BERTH && !open[y * W + x]) { map.set(x, y, TileKind.Wall); floors[y * W + x] = FILLER; }
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (map.get(x, y) === TileKind.Void && !open[y * W + x]) { map.set(x, y, TileKind.Wall); floors[y * W + x] = FILLER; }
 }
 
 /** Add one room of `kind` (the next type in its wing; other wing types are tried if that one finds no site). Returns the room, or null when the station has no room left. */

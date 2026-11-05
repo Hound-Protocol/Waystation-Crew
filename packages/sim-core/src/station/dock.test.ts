@@ -9,13 +9,17 @@ describe("dock: the berth at the Arrivals hall, with the cargo ship as its own c
   const st = buildStarterStation(1);
   const arrivals = st.rooms.find((r) => r.name === "Arrivals")!;
   const ship = st.ship!;
-  it("keeps the ship out of the station map: no ship room, and the berth west of Arrivals is empty space", () => {
-    expect(st.rooms.some((r) => r.name === "Cargo Ship")).toBe(false);
-    expect(ship).toBeTruthy();
-    const b = ship.berth;
+  it("keeps the ship's interior in the station's sim-space at the berth, and hands the viewer an exact copy as its own chunk", () => {
+    const room = st.rooms.find((r) => r.name === "Cargo Ship")!, b = ship.berth;
+    expect(room).toBeTruthy();
+    expect([b.x, b.y, b.w, b.h]).toEqual([room.x, room.y, room.w, room.h]);
     expect(b.x + b.w).toBe(arrivals.x);
     expect(b.y + (b.h - 1) / 2).toBe(HUB.y);
-    for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) expect(st.map.get(x, y), `${x},${y}`).toBe(TileKind.Void);
+    for (let y = 0; y < b.h; y++) for (let x = 0; x < b.w; x++) expect(ship.map.get(x, y), `${x},${y}`).toBe(st.map.get(b.x + x, b.y + y));
+    const inside = (d: { x: number; y: number }) => d.x >= b.x && d.x < b.x + b.w && d.y >= b.y && d.y < b.y + b.h;
+    expect(ship.deco!.length).toBe(st.deco!.filter(inside).length);
+    expect(ship.furniture.length).toBe(st.furniture.filter(inside).length);
+    for (const f of ship.furniture) expect(st.furniture.some((g) => g.x === b.x + f.x && g.y === b.y + f.y && g.kind === f.kind)).toBe(true);
   });
   it("matches the pad: same berth size, same gate position relative to it", () => {
     expect([ship.berth.w, ship.berth.h]).toEqual([PAD.berth.w, PAD.berth.h]);
@@ -35,10 +39,11 @@ describe("dock: the berth at the Arrivals hall, with the cargo ship as its own c
     const stern: number[] = []; for (let y = 0; y < ship.map.h; y++) if (ship.map.get(35, y) === TileKind.Airlock) stern.push(y);
     expect(stern).toEqual(Array.from({ length: 9 }, (_, i) => 7 + i));
   });
-  it("its cockpit has three consoles a crew member can reach from the ramp", () => {
-    const cockpit = ship.furniture.filter((f) => f.kind === TileKind.Console);
+  it("its cockpit has three consoles the plaza connects to through the ship", () => {
+    const cockpit = st.furniture.filter((f) => f.kind === TileKind.Console && st.rooms[f.roomId].name === "Cargo Ship");
     expect(cockpit.length).toBe(3);
-    for (const f of cockpit) { const ip = interactionPoint(ship.map, f)!; expect(ip).toBeTruthy(); expect(findPath(ship.map, { x: 34, y: 11 }, ip), `console@${f.x},${f.y}`).not.toBeNull(); }
+    expect(ship.furniture.filter((f) => f.kind === TileKind.Console).length).toBe(3);
+    for (const f of cockpit) { const ip = interactionPoint(st.map, f)!; expect(ip).toBeTruthy(); expect(findPath(st.map, { x: HUB.x, y: HUB.y + 3 }, ip), `console@${f.x},${f.y}`).not.toBeNull(); }
   });
   it("has a seat line, side doors, a slotted hazard-framed hold and instruments", () => {
     const decoIn = (sprite: string) => ship.deco!.filter((d) => d.sprite === sprite).length;

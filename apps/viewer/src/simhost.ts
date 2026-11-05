@@ -25,13 +25,24 @@ export class SimHost {
   }
 
   private clockDelta(): Extract<ServerMsg, { t: "delta" }> {
-    return { t: "delta", tick: this.world.tick, moves: [], states: [], clock: { speed: this.speed, paused: this.paused } };
+    return { t: "delta", tick: this.world.tick, moves: [], states: [], clock: { speed: this.speed, paused: this.paused }, shipStatus: this.shipStatus() };
   }
 
   inspectMsg(): ServerMsg | null {
     if (this.inspectId === null) return null;
     return { t: "inspect", id: this.inspectId, tick: this.world.tick, lines: explain(this.world, this.inspectId), profile: profileOf(this.world, this.inspectId) };
   }
+
+  /** The station as the viewer bakes it: the ship's berth left empty (the ship is drawn as a body of its own, from its chunk). */
+  private stationView() {
+    const w = this.world, m = w.station.map, st = w.station, b = st.ship?.berth;
+    const tiles = Array.from(m.tiles), floors = st.floors ? Array.from(st.floors) : [];
+    if (!b) return { tiles, floors, furniture: st.furniture, rooms: st.rooms, deco: st.deco ?? [] };
+    const inside = (d: { x: number; y: number }) => d.x >= b.x && d.x < b.x + b.w && d.y >= b.y && d.y < b.y + b.h;
+    for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) { tiles[y * m.w + x] = 0; if (floors.length) floors[y * m.w + x] = 0; }
+    return { tiles, floors, furniture: st.furniture.filter((f) => !inside(f)), rooms: st.rooms.filter((r) => r.name !== "Cargo Ship"), deco: (st.deco ?? []).filter((d) => !inside(d)) };
+  }
+  private shipStatus() { return { slip: this.world.ship.slip, holding: this.world.ship.holding }; }
 
   snapshot(): ServerMsg {
     const w = this.world, c = w.chars, m = w.station.map;
@@ -40,7 +51,8 @@ export class SimHost {
       chars.push({ id, name: c.name(id), dept: c.dept[id], rank: c.rank[id], x: c.x[id], y: c.y[id], state: c.state[id], job: c.job[id] });
     const sh = w.station.ship;
     const ship = sh ? { w: sh.map.w, h: sh.map.h, tiles: Array.from(sh.map.tiles), furniture: sh.furniture, rooms: sh.rooms, deco: sh.deco ?? [], floors: sh.floors ? Array.from(sh.floors) : [], berth: sh.berth } : undefined;
-    return { t: "snapshot", tick: w.tick, w: m.w, h: m.h, tiles: Array.from(m.tiles), furniture: w.station.furniture, rooms: w.station.rooms, chars, deco: w.station.deco ?? [], floors: w.station.floors ? Array.from(w.station.floors) : [], ship };
+    const v = this.stationView();
+    return { t: "snapshot", tick: w.tick, w: m.w, h: m.h, tiles: v.tiles, furniture: v.furniture, rooms: v.rooms, chars, deco: v.deco, floors: v.floors, ship, shipStatus: this.shipStatus() };
   }
 
   /** Present only once per station growth: lets the viewer rebake and fade the new rooms in. */
@@ -48,7 +60,8 @@ export class SimHost {
     if (this.world.stationRev === this.sentRev) return null;
     this.sentRev = this.world.stationRev;
     const w = this.world, m = w.station.map;
-    return { t: "station", tick: w.tick, w: m.w, h: m.h, tiles: Array.from(m.tiles), furniture: w.station.furniture, rooms: w.station.rooms, deco: w.station.deco ?? [], floors: w.station.floors ? Array.from(w.station.floors) : [] };
+    const v = this.stationView();
+    return { t: "station", tick: w.tick, w: m.w, h: m.h, tiles: v.tiles, furniture: v.furniture, rooms: v.rooms, deco: v.deco, floors: v.floors };
   }
 
   handle(msg: ClientMsg): ServerMsg[] {
@@ -96,6 +109,6 @@ export class SimHost {
     }
     const states: StateChange[] = [];
     for (let id = 0; id < before.length; id++) if (before[id] !== c.state[id]) states.push({ id, state: c.state[id] });
-    return { t: "delta", tick: w.tick, moves, states, clock: { speed: this.speed, paused: this.paused } };
+    return { t: "delta", tick: w.tick, moves, states, clock: { speed: this.speed, paused: this.paused }, shipStatus: this.shipStatus() };
   }
 }

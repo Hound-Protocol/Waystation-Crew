@@ -4,6 +4,7 @@ import { findPath } from "../station/nav";
 import { interactionPoint } from "../station/starter";
 import { isWalkable, type Point } from "../station/tilemap";
 import { shiftOf } from "../org/jobs";
+import { blockedFor, crewAction } from "../ship/ops";
 import { AFFORDANCES, ActionKind, stateForAction, type Action } from "./affordances";
 
 const SAMPLE = 8;
@@ -17,7 +18,7 @@ function pos(world: World, id: number): Point {
 /** All scored candidates, best first. Pure except for seeded rng draws. */
 export function scoreOptions(world: World, id: number, rng: Rng = world.rng): Scored[] {
   const c = world.chars, map = world.station.map;
-  const from = pos(world, id);
+  const from = pos(world, id), blocked = blockedFor(world, id, from);
   const out: Scored[] = [];
   for (const aff of AFFORDANCES) {
     const need = c[aff.satisfies][id];
@@ -37,7 +38,7 @@ export function scoreOptions(world: World, id: number, rng: Rng = world.rng): Sc
     const f = world.station.furniture[bestIdx];
     const ip = interactionPoint(map, f);
     if (!ip) continue;
-    const path = findPath(map, from, ip);
+    const path = findPath(map, from, ip, blocked);
     if (!path) continue;
     const score = urgency - 0.0015 * path.length + rng.next() * 0.02;
     out.push({
@@ -50,7 +51,7 @@ export function scoreOptions(world: World, id: number, rng: Rng = world.rng): Sc
   if (post && post.shift === shiftOf(world.tick) && !world.reservations.has(post.workstationFurnitureId)) {
     const f = world.station.furniture[post.workstationFurnitureId];
     const ip = interactionPoint(map, f);
-    const path = ip ? findPath(map, from, ip) : null;
+    const path = ip ? findPath(map, from, ip, blocked) : null;
     if (path) out.push({
       action: { kind: ActionKind.Work, furnitureId: f.id, path, ticksLeft: 1800 },
       score: 0.35 - 0.0005 * path.length,
@@ -61,13 +62,15 @@ export function scoreOptions(world: World, id: number, rng: Rng = world.rng): Sc
 }
 
 export function decide(world: World, id: number): Action {
+  const locked = crewAction(world, id);
+  if (locked) return locked;
   const opts = scoreOptions(world, id);
   if (opts.length) return opts[0].action;
   const map = world.station.map, from = pos(world, id), rng = world.rng;
   for (let tries = 0; tries < 5; tries++) {
     const to = { x: from.x + rng.int(-8, 8), y: from.y + rng.int(-8, 8) };
     if (!map.inBounds(to.x, to.y) || !isWalkable(map.get(to.x, to.y))) continue;
-    const path = findPath(map, from, to);
+    const path = findPath(map, from, to, blockedFor(world, id, from));
     if (path && path.length) return { kind: ActionKind.Wander, furnitureId: -1, path, ticksLeft: 0 };
   }
   return { kind: ActionKind.Idle, furnitureId: -1, path: [], ticksLeft: rng.int(5, 15) };

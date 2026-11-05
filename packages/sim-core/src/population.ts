@@ -6,10 +6,11 @@ import { Rank } from "./org/ranks";
 import { assignJobs } from "./org/jobs";
 import { TileKind } from "./station/tilemap";
 
+/** Pilot and co-pilot for each of the three shifts: the ship cannot fly without them. */
+export const FLIGHT_CREW = 6;
 const MIX: Array<[Department, number]> = [
   [Department.Command, 3], [Department.Engineering, 12], [Department.Medical, 8],
   [Department.Security, 8], [Department.Supply, 10], [Department.Service, 19],
-  [Department.Flight, 2],
 ];
 
 function dockingSpot(world: World): { x: number; y: number } {
@@ -37,6 +38,7 @@ export function seedPopulation(world: World, n: number): void {
   for (let i = 0; i < n; i++) {
     let r = world.rng.int(0, total - 1), dept = Department.Service;
     for (const [d, k] of MIX) { if (r < k) { dept = d; break; } r -= k; }
+    if (i < FLIGHT_CREW && n >= 3 * FLIGHT_CREW) dept = Department.Flight;
     const idx = seen.get(dept) ?? 0; seen.set(dept, idx + 1);
     const rank = idx === 0 ? Rank.Chief : idx < 3 ? Rank.Senior : (world.rng.int(0, 2) as Rank);
     arrive(world, dept, rank);

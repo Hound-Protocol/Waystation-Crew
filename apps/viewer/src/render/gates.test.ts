@@ -5,7 +5,8 @@ import { findGates, gateStrips, gateBeacons, strobe, beaconLevel } from "./gates
 describe("gateways: runs of airlock cells become one big door", () => {
   const st = buildStarterStation(1);
   const flat = (m: { w: number; h: number; get(x: number, y: number): TileKind }) => { const t: number[] = []; for (let y = 0; y < m.h; y++) for (let x = 0; x < m.w; x++) t.push(m.get(x, y)); return t; };
-  const stationTiles = flat(st.map), shipTiles = flat(st.ship!.map);
+  const stationTiles = flat(st.map), shipTiles = flat(st.ship!.map), b = st.ship!.berth;
+  for (let y = b.y; y < b.y + b.h; y++) for (let x = b.x; x < b.x + b.w; x++) stationTiles[y * st.map.w + x] = 0;      // the viewer bakes the station with the ship's berth empty
   it("finds one 1x9 gateway on the station: the Arrivals airlocks facing the berth", () => {
     const gates = findGates(stationTiles, st.map.w, st.map.h);
     expect(gates.length).toBe(1);

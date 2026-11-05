@@ -50,6 +50,8 @@ export class CharLayer {
       l.views.push({ body, head, dept: this.depts[i] });
     }
   }
+  /** Maps a sim position to where it is drawn (crew aboard the flying ship ride its body). */
+  place: ((x: number, y: number) => { x: number; y: number }) | null = null;
   update(dt: number, renderTick: number, tracks: Tracks, cam: Camera, viewW: number, viewH: number) {
     const target = lodStyle(zoomLevel(cam.scale));
     if (target !== this.style) { this.style = target; }
@@ -65,7 +67,8 @@ export class CharLayer {
       this.ensure(s);
       for (let i = 0; i < this.ids.length; i++) {
         const v = l.views[i];
-        const p = tracks.positionAt(this.ids[i], renderTick);
+        const raw = tracks.positionAt(this.ids[i], renderTick);
+        const p = raw && this.place ? { ...raw, ...this.place(raw.x, raw.y) } : raw;
         const vis = !!p && p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1;
         const spr = s === "sprite" && !!this.textures;
         v.body.alpha = v.head.alpha = this.fade[i];

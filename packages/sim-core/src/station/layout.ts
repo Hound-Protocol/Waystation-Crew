@@ -2,7 +2,7 @@ import { TileKind, createTilemap } from "./tilemap";
 import { createRng, type Rng } from "../rng";
 import { MOUNTS, type ModuleKind } from "./modules";
 import { buildRoom, carveHall, sealHull } from "./planner";
-import { buildDock } from "./dock";
+import { buildDock, extractShip } from "./dock";
 import { furnishRoom } from "./furnish";
 import { nextBuild } from "./demand";
 import { HUB, PLAZA_R, STATION_H, STATION_W } from "./constants";
@@ -18,11 +18,7 @@ export const STARTER_CREW = 100;
 export function growStation(st: Station, pop: number, rng: Rng): Room | null {
   const kind: ModuleKind | null = nextBuild(st, pop);
   if (!kind) return null;
-  if (kind === "arrivals") { const hall = buildDock(st, rng); if (hall) {
-    for (const r of st.rooms) if (!r.dockDone) { r.dockDone = true; furnishRoom(st, r); addWallMounts(st, r, rng); }
-    const sh = st.ship; if (sh && !sh.rooms[0].dockDone) { sh.rooms[0].dockDone = true; furnishRoom(sh, sh.rooms[0]); addWallMounts(sh, sh.rooms[0], rng); }
-    return hall;
-  } }
+  if (kind === "arrivals") { const hall = buildDock(st, rng); if (hall) { for (const r of st.rooms) if (!r.dockDone) { r.dockDone = true; furnishRoom(st, r); addWallMounts(st, r, rng); } st.ship = extractShip(st); return hall; } }
   const room = buildRoom(st, kind, rng);
   if (room) { furnishRoom(st, room); addWallMounts(st, room, rng); }
   return room;

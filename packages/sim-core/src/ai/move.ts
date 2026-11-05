@@ -2,6 +2,7 @@ import type { World } from "../world";
 import { findPath } from "../station/nav";
 import { isWalkable } from "../station/tilemap";
 import { CharState } from "./affordances";
+import { blockedFor } from "../ship/ops";
 
 function cancel(world: World, id: number): void {
   const a = world.actions[id];
@@ -33,16 +34,18 @@ export function stepMovement(world: World): void {
       const goal0 = a.path[a.path.length - 1];
       if (!isWalkable(map.get(goal0.x, goal0.y))) { cancel(world, id); break; }
       let next = a.path[0];
+      const hull = blockedFor(world, id, { x: Math.round(c.x[id]), y: Math.round(c.y[id]) });
+      if (hull(next.x, next.y)) { cancel(world, id); break; }                      // the ship's gate shut on them
       if (!isWalkable(map.get(next.x, next.y))) {
         const goal = a.path[a.path.length - 1];
-        const re = findPath(map, { x: Math.round(c.x[id]), y: Math.round(c.y[id]) }, goal);
+        const re = findPath(map, { x: Math.round(c.x[id]), y: Math.round(c.y[id]) }, goal, hull);
         if (!re || re.length === 0) { cancel(world, id); break; }
         a.path = re; next = re[0];
       }
       const from = { x: c.x[id], y: c.y[id] };
       if (isStill(next.x, next.y) && !(next.x === from.x && next.y === from.y)) {
         const goal = a.path[a.path.length - 1];
-        const alt = findPath(map, { x: Math.round(from.x), y: Math.round(from.y) }, goal, isStill);
+        const alt = findPath(map, { x: Math.round(from.x), y: Math.round(from.y) }, goal, (x, y) => isStill(x, y) || hull(x, y));
         if (alt && alt.length && !isStill(alt[0].x, alt[0].y)) { a.path = alt; next = alt[0]; a.waited = 0; }
         else if ((a.waited = (a.waited ?? 0) + 1) <= MAX_WAIT) { c.walkAcc[id] = 0; break; } // wait politely, then push through
       }
