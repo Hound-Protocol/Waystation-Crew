@@ -81,7 +81,9 @@ export function stepAI(world: World): void {
   let n = 0;
   for (let id = 0; id < c.count; id++) {
     if (world.actions[id] || c.nextDecideTick[id] > world.tick) continue;
-    const a = decide(world, id);
+    let a = decide(world, id);
+    const holder = a.furnitureId >= 0 ? world.reservations.get(a.furnitureId) : undefined;
+    if (holder !== undefined && holder !== id) a = { kind: ActionKind.Idle, furnitureId: -1, path: [], ticksLeft: 15 };   // never take what someone else holds
     world.actions[id] = a;
     if (a.furnitureId >= 0) world.reservations.set(a.furnitureId, id);
     c.state[id] = stateForAction(a.kind, a.path.length === 0);

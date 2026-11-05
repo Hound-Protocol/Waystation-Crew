@@ -5,6 +5,7 @@ import { ActionKind, CharState } from "../ai/affordances";
 import { interactionPoint } from "../station/starter";
 import { findPath } from "../station/nav";
 import { Department } from "../org/departments";
+import { shiftOf } from "../org/jobs";
 import { shipPose, type ShipPose } from "./pose";
 import { shipPhase } from "./timeline";
 import { flightSeats } from "./crew";
@@ -69,11 +70,12 @@ export function stepShip(w: World): void {
   }
 }
 
-/** What a locked-in crew member does: sit at their own console, or just stay put. */
+/** What a locked-in crew member does: sit at their own console if it is their shift and nobody else holds it, or just stay put. */
 export function crewAction(w: World, id: number): Action | null {
   if (!w.ship.crew.includes(id)) return null;
   const j = w.chars.job[id], post = j >= 0 ? w.posts[j] : null;
-  if (post && post.dept === Department.Flight) {
+  const held = post ? w.reservations.get(post.workstationFurnitureId) : undefined;
+  if (post && post.dept === Department.Flight && post.shift === shiftOf(w.tick) && (held === undefined || held === id)) {   // only the one on shift, and only a free console
     const f = w.station.furniture[post.workstationFurnitureId], ip = interactionPoint(w.station.map, f);
     const path = ip ? findPath(w.station.map, { x: Math.round(w.chars.x[id]), y: Math.round(w.chars.y[id]) }, ip) : null;
     if (path) return { kind: ActionKind.Work, furnitureId: f.id, path, ticksLeft: 60 };
