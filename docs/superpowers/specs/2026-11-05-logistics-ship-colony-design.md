@@ -11,11 +11,14 @@ Everything is tangible. People never pop in on the station: new followers appear
 - **Planets are clickable**: camera glides to the body and follows it, an outline marks it, an info card shows details (name, type, radius, orbit, day length, colony). Eased, no pops.
 - **City on the home planet**: one non-growable colony, source of supplies and people. Visible only as a marker from far; a top-down patch fades in at extreme zoom, at the same tile scale as everything else.
 
-## Places (the structural change)
-Today the sim has one map. We introduce **Places**: each has its own tilemap, furniture, rooms and jobs.
-- `Station` (exists), `Ship` (mobile), `Outpost` (city spaceport: landing pad, arrivals hall, railway platform).
-- Every character has a `placeId`. A **portal** joins two places at fixed tiles (dock door <-> ship ramp, ship side door <-> dock gangway, outpost pad <-> ramp). Pathing: to the portal, cross, continue.
-- Rendering: each place is its own baked canvas. The ship canvas is positioned in world space from the ship's state; docked, it aligns to the dock so the ramp meets the dock floor.
+## Decisions (agreed 2026-11-05)
+- **One world map** (user's call, over the separate-maps proposal). Station, dock, outpost and ship all live in one shared coordinate space; no per-place portals.
+- **Synchronous orbit:** station orbits the home planet once per 24h, planet spins once per 24h, so the city stays below the station.
+- **Trains in and out:** new followers arrive by train at the outpost, resigned ones leave on one.
+- **First slice:** dock + docked, walkable ship (boarding, cargo). Flight comes next.
+
+## One world, how it stays feasible
+A flat grid out to the planet (~900 tiles) would be about a million tiles, so the single world is stored as **sparse chunks** (e.g. 32x32, allocated only where something exists; the void between is empty). Static places (station, outpost) are chunk sets at fixed positions. The ship is a **rigid body**: its interior is its own chunk set with a local-to-world transform, and a character aboard keeps ship-local coordinates (so walking inside a flying ship is stable). Boarding is just stepping across the ramp edge from world coordinates into ship-local ones. Pathing treats the docked ship as part of the walkable world; in flight, it is a closed room.
 
 ## Ship (one deck, first design)
 Cargo hauler, about a quarter of the station in footprint. Orange with black accents (Supply colours). Reference: the uploaded Lakon Type 6 deck plan (symmetrical, cargo flanking a central spine).
@@ -40,8 +43,6 @@ Crates are items with a type and quantity. Supply crew carry them between the Ca
 - Characters never vanish or spawn on the station map.
 
 ## Open questions
-1. Places as separate maps with portals (proposed) vs one huge world map.
-2. Station orbit and planet spin: synchronous (city always below the station) or not.
-3. Do new people arrive by train (mirror of the exit) or appear on the pad.
-4. Build order: static docked ship first, then flight, then outpost.
-5. Resource model: which supplies the station consumes and how demand is measured.
+1. Resource model: which supplies the station consumes and how demand is measured.
+2. Chunk size and how the baked canvases are split (per chunk) so the renderer stays smooth.
+3. Train schedule and how follower events map to arrivals (batching).
