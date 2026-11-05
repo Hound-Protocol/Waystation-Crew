@@ -5,6 +5,7 @@ import { Camera } from "./render/camera";
 import { Tracks } from "./render/interp";
 import { CharLayer } from "./render/characters";
 import { buildTileCanvas, canvasTexture, characterTextures, TILE } from "./render/tiles";
+import { Pda } from "./ui/pda";
 import { DevPanel } from "./ui/devpanel";
 import { zoomLevel } from "./render/lod";
 import { ClockSync } from "./render/clock";
@@ -52,8 +53,10 @@ async function boot() {
   const select = (id: number | null) => {
     selected = id; follow = id !== null; if (id === null) markerPos = null;
     if (id !== null && cam.targetScale < 16) cam.zoomAtSmooth(app.screen.width / 2, app.screen.height / 2, 16 / cam.targetScale);
+    if (id === null) pda.hide(); else pda.show();
     panel.select(id); transport.send({ t: "inspect", id });
   };
+  const pda = new Pda(() => select(null));
   const panel = new DevPanel({ send: (m) => transport.send(m), onSelect: (id) => select(id) });
   transport.onMessage((m: ServerMsg) => {
     if (m.t === "snapshot") {
@@ -77,7 +80,7 @@ async function boot() {
     } else if (m.t === "delta") {
       tracks.apply(m.moves); tracks.prune(m.tick - 120); latestTick = m.tick; speed = m.clock.speed; paused = m.clock.paused;
       panel.updateStates(m.states); panel.setClock(paused);
-    } else if (m.id === selected) panel.setInspect(m.lines);
+    } else if (m.id === selected) { panel.setInspect(m.lines); if (m.profile) pda.update(m.profile); }
   });
   setTimeout(() => { if (!fitted) showError("The simulation did not start (worker blocked or unsupported browser)."); }, 6000);
   transport.send({ t: "subscribe", viewport: { x: 0, y: 0, w: mapW, h: mapH, zoom: 3 } });

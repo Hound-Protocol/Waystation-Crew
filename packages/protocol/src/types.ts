@@ -14,3 +14,13 @@ export type DevCmd =
   | { c: "pause" }
   | { c: "spawn"; count: number; dept?: number }
   | { c: "reset"; seed: number };
+
+/** Live status card for the PDA. Needs run 0 (desperate) to 1 (satisfied). */
+export interface Profile {
+  id: number; name: string; dept: string; rank: string; activity: string; place: string;
+  needs: { hunger: number; energy: number; social: number; fun: number };
+  condition: string;
+  job: { dept: string; shift: "day" | "swing" | "night"; room: string; onShift: boolean } | null;
+  shiftNow: "day" | "swing" | "night";
+  thoughts: string[];
+}

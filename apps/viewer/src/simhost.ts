@@ -1,4 +1,4 @@
-import { createWorld, step, seedPopulation, arrive, explain, Department, type World } from "@wc/sim-core";
+import { profileOf, createWorld, step, seedPopulation, arrive, explain, Department, type World } from "@wc/sim-core";
 import type { ClientMsg, ServerMsg, Move, StateChange } from "@wc/protocol";
 
 export const MAX_CATCHUP_TICKS = 600;
@@ -30,7 +30,7 @@ export class SimHost {
 
   inspectMsg(): ServerMsg | null {
     if (this.inspectId === null) return null;
-    return { t: "inspect", id: this.inspectId, tick: this.world.tick, lines: explain(this.world, this.inspectId) };
+    return { t: "inspect", id: this.inspectId, tick: this.world.tick, lines: explain(this.world, this.inspectId), profile: profileOf(this.world, this.inspectId) };
   }
 
   snapshot(): ServerMsg {

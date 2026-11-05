@@ -11,6 +11,7 @@ export * from "./ai/move";
 export * from "./org/jobs";
 export * from "./names"; export * from "./population";
 export * from "./ai/explain";
+export * from "./ai/profile";
 export * from "./station/modules";
 export * from "./station/kit";
 export * from "./station/growth";
