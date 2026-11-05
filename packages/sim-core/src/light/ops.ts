@@ -20,7 +20,7 @@ export interface LightOps { /** lamps lighting each tile */ cover: Uint8Array; c
 
 export const createLightOps = (st: Station): LightOps => ({ cover: buildCoverage(st), coverRev: 0, orders: [], bad: new Set(), nextId: 1, built: 0 });
 
-const onShiftEngineers = (w: World): number[] => {
+export const onShiftEngineers = (w: World): number[] => {
   const out: number[] = [], s = shiftOf(w.tick), c = w.chars;
   for (let id = 0; id < c.count; id++) if (c.dept[id] === Department.Engineering && c.job[id] >= 0 && w.posts[c.job[id]]?.shift === s) out.push(id);
   return out;
@@ -34,10 +34,10 @@ export function engineeringLead(w: World): number {
 }
 
 const standTile = (o: LightOrder) => ({ x: o.x, y: o.y + 1 });
-const isFree = (w: World, id: number) => { const a = w.actions[id]; return !a || a.kind === ActionKind.Work || a.kind === ActionKind.Idle || a.kind === ActionKind.Wander; };
+export const isFree = (w: World, id: number) => { const a = w.actions[id]; return !a || a.kind === ActionKind.Work || a.kind === ActionKind.Idle || a.kind === ActionKind.Wander; };
 
 /** An engineer given a build order drops their ordinary work for it. */
-function interrupt(w: World, id: number): void {
+export function interrupt(w: World, id: number): void {
   const a = w.actions[id];
   if (a && a.furnitureId >= 0 && w.reservations.get(a.furnitureId) === id) w.reservations.delete(a.furnitureId);
   w.actions[id] = null; w.chars.nextDecideTick[id] = w.tick;

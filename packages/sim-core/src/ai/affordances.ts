@@ -1,7 +1,7 @@
 import { TileKind, type Point } from "../station/tilemap";
 import type { NeedKey } from "../ecs";
 
-export enum ActionKind { Idle, Wander, Eat, Sleep, Relax, Work, Build }
+export enum ActionKind { Idle, Wander, Eat, Sleep, Relax, Work, Build, Watch, Service, Refuel, Restart }
 export enum CharState { Idle, Walking, Eating, Sleeping, Relaxing, Working }
 
 export interface Action {
@@ -36,7 +36,7 @@ export function stateForAction(kind: ActionKind, arrived: boolean): CharState {
     case ActionKind.Eat: return CharState.Eating;
     case ActionKind.Sleep: return CharState.Sleeping;
     case ActionKind.Relax: return CharState.Relaxing;
-    case ActionKind.Work: case ActionKind.Build: return CharState.Working;
+    case ActionKind.Work: case ActionKind.Build: case ActionKind.Watch: case ActionKind.Service: case ActionKind.Refuel: case ActionKind.Restart: return CharState.Working;
     default: return CharState.Idle;
   }
 }

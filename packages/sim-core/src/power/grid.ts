@@ -12,6 +12,9 @@ export const GRID = {
 /** Fuel a ship brings to the station store on each arrival (a share of a full tank). */
 export const FUEL_DELIVERY = 0.3;
 
+/** Which engineer holds each reactor duty, or -1. */
+export interface PowerAssign { watch: number; refuel: number; service: number; restart: number }
+
 export interface PowerGrid {
   reactor: ReactorState;
   /** battery bank charge, 0..1 */ battery: number;
@@ -20,10 +23,11 @@ export interface PowerGrid {
   /** doors, airlock panels and life support have power (supply covers them, or the battery does) */ doorsPowered: boolean;
   /** the battery is empty during a blackout */ lifeSupportDown: boolean;
   /** fuel waiting in storage for engineers to load, 0..1 */ fuelStore: number;
+  /** who is on each reactor duty (see power/ops.ts) */ assign: PowerAssign;
   /** cached counts, refreshed when the station changes */ cacheRev: number; lamps: number; machines: number;
 }
 
-export const createGrid = (): PowerGrid => ({ reactor: createReactor(), battery: 1, demand: 0, supply: 0, supplyLevel: 1, doorsPowered: true, lifeSupportDown: false, fuelStore: 0.3, cacheRev: -1, lamps: 0, machines: 0 });
+export const createGrid = (): PowerGrid => ({ reactor: createReactor(), battery: 1, demand: 0, supply: 0, supplyLevel: 1, doorsPowered: true, lifeSupportDown: false, fuelStore: 0.3, assign: { watch: -1, refuel: -1, service: -1, restart: -1 }, cacheRev: -1, lamps: 0, machines: 0 });
 
 /** Total draw: lamps, machines (consoles) and the base load. Counts are cached until the station changes. */
 export function demand(w: World): number {

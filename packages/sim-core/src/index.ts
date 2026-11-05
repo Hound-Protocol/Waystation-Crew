@@ -22,4 +22,4 @@ export * from "./ship/timeline";
 export * from "./ship/pose";
 export * from "./light/coverage"; export * from "./light/survey"; export * from "./light/ops";
 export * from "./stats";
-export * from "./power/reactor"; export * from "./power/grid";
+export * from "./power/reactor"; export * from "./power/grid"; export * from "./power/ops";

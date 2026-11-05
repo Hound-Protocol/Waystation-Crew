@@ -5,7 +5,7 @@ import { ActionKind } from "./affordances";
 export interface Task { kind: number; began: number; total: number }
 export const NO_TASK: Task = { kind: 0, began: -1, total: 0 };
 
-const SHOWN = new Set<ActionKind>([ActionKind.Eat, ActionKind.Sleep, ActionKind.Relax, ActionKind.Work, ActionKind.Build]);
+const SHOWN = new Set<ActionKind>([ActionKind.Eat, ActionKind.Sleep, ActionKind.Relax, ActionKind.Work, ActionKind.Build, ActionKind.Watch, ActionKind.Service, ActionKind.Refuel, ActionKind.Restart]);
 
 export function taskOf(world: World, id: number): Task {
   const a = world.actions[id];

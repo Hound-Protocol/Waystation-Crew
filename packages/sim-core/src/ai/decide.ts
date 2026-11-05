@@ -8,6 +8,7 @@ import { blockedFor, crewAction } from "../ship/ops";
 import { AFFORDANCES, ActionKind, stateForAction, type Action } from "./affordances";
 import { DECAY } from "./needs";
 import { buildAction, finishBuild } from "../light/ops";
+import { powerAction, finishPower, isPowerKind } from "../power/ops";
 
 const SAMPLE = 8;
 
@@ -61,6 +62,8 @@ export function scoreOptions(world: World, id: number, rng: Rng = world.rng): Sc
     });
   }
   const build = buildAction(world, id, from, blocked);
+  const duty = powerAction(world, id, from, blocked);
+  if (duty) out.push(duty);                                     // a reactor duty outranks an ordered lamp (0.45)
   if (build) out.push(build);                                   // an ordered lamp outranks shift work (0.35) but not urgent needs
   return out.sort((a, b) => b.score - a.score);
 }
@@ -105,7 +108,7 @@ export function stepActions(world: World): void {
     if (!a || a.path.length > 0) continue;
     c.state[id] = stateForAction(a.kind, true);
     const aff = AFFORDANCES.find((x) => x.kind === a.kind);
-    if (a.began === undefined && (aff || a.kind === ActionKind.Work || a.kind === ActionKind.Build)) {      // arrived: the task starts now
+    if (a.began === undefined && (aff || a.kind === ActionKind.Work || a.kind === ActionKind.Build || isPowerKind(a.kind))) {      // arrived: the task starts now
       a.began = world.tick;
       a.total = aff ? Math.max(1, Math.min(a.ticksLeft, Math.ceil((0.98 - c[aff.satisfies][id]) / (aff.amountPerTick - DECAY[aff.satisfies])))) : a.ticksLeft;
     }
@@ -115,9 +118,10 @@ export function stepActions(world: World): void {
       a.ticksLeft--;
       const starving = a.kind === ActionKind.Sleep && c.hunger[id] < 0.1;
       if (a.ticksLeft > 0 && arr[id] < 0.98 && !starving) continue;
-    } else if ((a.kind === ActionKind.Idle || a.kind === ActionKind.Work || a.kind === ActionKind.Build) && --a.ticksLeft > 0) continue;
+    } else if ((a.kind === ActionKind.Idle || a.kind === ActionKind.Work || a.kind === ActionKind.Build || isPowerKind(a.kind)) && --a.ticksLeft > 0) continue;
     if (a.furnitureId >= 0 && world.reservations.get(a.furnitureId) === id) world.reservations.delete(a.furnitureId);
     if (a.kind === ActionKind.Build) finishBuild(world, a);
+    if (isPowerKind(a.kind)) finishPower(world, a, id);
     world.actions[id] = null;
     c.state[id] = 0;
   }

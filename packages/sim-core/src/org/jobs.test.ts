@@ -41,7 +41,7 @@ describe("assignJobs", () => {
   });
   it("on shift, a fed and rested character walks to its workstation and works", () => {
     const w = createWorld(5);
-    const id = spawn(w, Department.Engineering);
+    const id = spawn(w, Department.Medical);       // not Engineering: an on-shift engineer keeps reactor watch at the console instead
     assignJobs(w);
     const post = jobOf(w, id)!;
     expect(post.shift).toBe("day");

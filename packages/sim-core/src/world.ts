@@ -11,6 +11,7 @@ import { createCharStore, hashChars, type CharStore } from "./ecs";
 import { createShipOps, stepShip, type ShipOps } from "./ship/ops";
 import { createLightOps, stepLights, type LightOps } from "./light/ops";
 import { createGrid, stepGrid, type PowerGrid } from "./power/grid";
+import { stepPower } from "./power/ops";
 
 export type WorldEvent = { type: "moved"; id: number; from: Point; to: Point } | { type: "state"; id: number; state: number };
 
@@ -62,6 +63,7 @@ export function step(world: World): void {
   stepShip(world);
   stepLights(world);
   stepGrid(world);
+  stepPower(world);
   decayNeeds(world);
   stepAI(world);
   stepMovement(world);
