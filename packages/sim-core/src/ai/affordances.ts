@@ -1,7 +1,7 @@
 import { TileKind, type Point } from "../station/tilemap";
 import type { NeedKey } from "../ecs";
 
-export enum ActionKind { Idle, Wander, Eat, Sleep, Relax, Work }
+export enum ActionKind { Idle, Wander, Eat, Sleep, Relax, Work, Build }
 export enum CharState { Idle, Walking, Eating, Sleeping, Relaxing, Working }
 
 export interface Action {
@@ -12,6 +12,7 @@ export interface Action {
   waited?: number;     // ticks spent waiting for a blocked tile
   began?: number;      // tick the task actually started (on arrival)
   total?: number;      // how many ticks it will take, for progress displays
+  order?: number;      // the light order a Build action fulfils
 }
 
 export interface Affordance {
@@ -35,7 +36,7 @@ export function stateForAction(kind: ActionKind, arrived: boolean): CharState {
     case ActionKind.Eat: return CharState.Eating;
     case ActionKind.Sleep: return CharState.Sleeping;
     case ActionKind.Relax: return CharState.Relaxing;
-    case ActionKind.Work: return CharState.Working;
+    case ActionKind.Work: case ActionKind.Build: return CharState.Working;
     default: return CharState.Idle;
   }
 }

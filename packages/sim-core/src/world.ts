@@ -9,6 +9,7 @@ import { stepAI, stepActions } from "./ai/decide";
 import { growIfNeeded, GROWTH_INTERVAL } from "./station/growth";
 import { createCharStore, hashChars, type CharStore } from "./ecs";
 import { createShipOps, stepShip, type ShipOps } from "./ship/ops";
+import { createLightOps, stepLights, type LightOps } from "./light/ops";
 
 export type WorldEvent = { type: "moved"; id: number; from: Point; to: Point } | { type: "state"; id: number; state: number };
 
@@ -28,6 +29,8 @@ export interface World {
   stationRev: number;
   /** the cargo ship's rules: schedule slip, crew, boarding (see ship/ops.ts) */
   ship: ShipOps;
+  /** Engineering's lamp survey and build orders (see light/ops.ts) */
+  light: LightOps;
   recordEvents: boolean;
   events: WorldEvent[];
   /** extension point: hash contributors registered by subsystems */
@@ -47,13 +50,14 @@ export function createWorld(seed: number, station: Station = buildStarterStation
   }
   return {
     seed, tick: 0, rng: createRng(seed), chars: createCharStore(), station, furnitureByKind,
-    reservations: new Map(), actions: [], posts: buildJobPosts(station), postHolder: new Map(), stats: { decisions: 0 }, stationRev: 0, ship: createShipOps(station), recordEvents: false, events: [], hashers: [],
+    reservations: new Map(), actions: [], posts: buildJobPosts(station), postHolder: new Map(), stats: { decisions: 0 }, stationRev: 0, ship: createShipOps(station), light: createLightOps(station), recordEvents: false, events: [], hashers: [],
   };
 }
 
 export function step(world: World): void {
   world.tick += 1;
   stepShip(world);
+  stepLights(world);
   decayNeeds(world);
   stepAI(world);
   stepMovement(world);
@@ -75,6 +79,7 @@ export function hashWorld(world: World): number {
   num(world.seed); num(world.tick); num(world.rng.state());
   hashChars(world.chars, hasher);
   num(world.ship.slip); num(world.ship.crew.length); num(world.ship.holding ? 1 : 0);
+  num(world.light.built); num(world.light.orders.length);
   for (const f of world.hashers) f(hasher);
   return h >>> 0;
 }

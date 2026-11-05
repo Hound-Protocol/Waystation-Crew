@@ -10,12 +10,13 @@ describe("iconKey", () => {
     expect(iconKey({ kind: SLEEP, began: 5, total: 9 }, 1)).toBe("sleep");
     expect(iconKey({ kind: RELAX, began: 5, total: 9 }, 1)).toBe("relax");
     for (let d = 0; d < 7; d++) expect(iconKey({ kind: WORK, began: 0, total: 5 }, d)).toBe(`work:${d}`);
+    expect(iconKey({ kind: 6, began: 0, total: 240 }, 5)).toBe("build");
   });
 });
 
 describe("glyphs", () => {
   it("has a 7x7 glyph for every key, all different, none empty", () => {
-    expect(ICON_KEYS).toHaveLength(10);
+    expect(ICON_KEYS).toHaveLength(11);
     const seen = new Set<string>();
     for (const k of ICON_KEYS) {
       const g = GLYPHS[k]; expect(g, k).toBeDefined();

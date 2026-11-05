@@ -23,7 +23,7 @@ export interface CharProfile {
 
 const DOING: Record<number, string> = {
   [ActionKind.Idle]: "Standing by", [ActionKind.Wander]: "Wandering the station", [ActionKind.Eat]: "Eating",
-  [ActionKind.Sleep]: "Sleeping", [ActionKind.Relax]: "Relaxing", [ActionKind.Work]: "Working",
+  [ActionKind.Sleep]: "Sleeping", [ActionKind.Relax]: "Relaxing", [ActionKind.Work]: "Working", [ActionKind.Build]: "Fitting a wall lamp",
 };
 const WORST: Record<string, [string, string]> = { hunger: ["Hungry", "Starving"], energy: ["Tired", "Exhausted"], social: ["Lonely", "Isolated"], fun: ["Bored", "Restless"] };
 

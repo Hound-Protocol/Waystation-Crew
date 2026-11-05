@@ -20,3 +20,4 @@ export * from "./station/blueprint";
 export * from "./station/pad";
 export * from "./ship/timeline";
 export * from "./ship/pose";
+export * from "./light/coverage"; export * from "./light/survey"; export * from "./light/ops";

@@ -4,20 +4,21 @@ import { hex, type RGB } from "./sprites/palette";
 /** Status icons above heads: a round pixel bubble with a 7x7 glyph. Which one, how far along, and the little hop when a task starts. */
 export interface TaskLike { kind: number; began: number; total: number }
 
-const EAT = 2, SLEEP = 3, RELAX = 4, WORK = 5;
+const EAT = 2, SLEEP = 3, RELAX = 4, WORK = 5, BUILD = 6;
 export const ICON_W = 15, ICON_H = 16;
 export const DEPT_ICON_KEYS = [0, 1, 2, 3, 4, 5, 6].map((d) => `work:${d}`);
-export const ICON_KEYS = ["eat", "sleep", "relax", ...DEPT_ICON_KEYS];
+export const ICON_KEYS = ["eat", "sleep", "relax", "build", ...DEPT_ICON_KEYS];
 
 /** The icon for a task, or null when there is nothing to show. Work depends on the character's department (0 Command .. 6 Flight). */
 export function iconKey(t: TaskLike, dept: number): string | null {
-  switch (t.kind) { case EAT: return "eat"; case SLEEP: return "sleep"; case RELAX: return "relax"; case WORK: return `work:${dept}`; default: return null; }
+  switch (t.kind) { case EAT: return "eat"; case SLEEP: return "sleep"; case RELAX: return "relax"; case WORK: return `work:${dept}`; case BUILD: return "build"; default: return null; }
 }
 
 export const GLYPHS: Record<string, string[]> = {
   eat: ["..#.#..", ".#.#...", ".......", "#######", ".#####.", "..###..", "......."],
   sleep: [".#####.", ".....#.", "....#..", "...#...", "..#....", ".#.....", ".#####."],
   relax: [".#...#.", ".#...#.", ".......", "#.....#", ".#...#.", "..###..", "......."],
+  build: ["...#...", "..###..", ".#####.", "...#...", "...#...", "...#...", "..###.."],
   "work:0": ["...#...", "..###..", "#######", ".#####.", "..###..", ".##.##.", ".#...#."],
   "work:1": [".#.#.#.", ".#####.", "##...##", "#.....#", "##...##", ".#####.", ".#.#.#."],
   "work:2": ["..###..", "..###..", "#######", "#######", "#######", "..###..", "..###.."],
@@ -29,7 +30,7 @@ export const GLYPHS: Record<string, string[]> = {
 
 const GLYPH_COLOR: Record<string, RGB> = {
   eat: hex("#ffb02e"), sleep: hex("#b58cff"), relax: hex("#7dffb0"),
-  "work:0": hex("#ffd866"), "work:1": hex("#ff8a2a"), "work:2": hex("#3fd98a"), "work:3": hex("#ff4040"), "work:4": hex("#4de1ff"), "work:5": hex("#9fb4c4"), "work:6": hex("#c9f6ff"),
+  build: hex("#ffe27a"), "work:0": hex("#ffd866"), "work:1": hex("#ff8a2a"), "work:2": hex("#3fd98a"), "work:3": hex("#ff4040"), "work:4": hex("#4de1ff"), "work:5": hex("#9fb4c4"), "work:6": hex("#c9f6ff"),
 };
 /** Ring colour per icon, as 0xRRGGBB for the viewer's Graphics. */
 export const iconColor = (key: string): number => { const c = GLYPH_COLOR[key] ?? [255, 255, 255]; return (c[0] << 16) | (c[1] << 8) | c[2]; };
